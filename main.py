@@ -1,106 +1,110 @@
-class Jogador :
-    def __init__(self,nome,hp):
-        self.nome = nome
-        self.hp = hp
-        self.danobase = 0
-        self.agilidadebase = 0
-        self.inventario = []
-
-        #slots
-        self.arma = None
-        self.anel = None
-
-    def add_item_inventario(self,item) :
-        print(f"{item.nome} foi adicionado ao inventario")
-        self.inventario.append(item)
-
-    def mostrar_inventario(self) :
-        if not self.inventario :
-            print("Inventario vazio")
-            return
-        opc = 0
-        fim = len(self.inventario)
-        while opc != fim :
- 
-            for i, item in enumerate(self.inventario) :
-                print(f"-[{i}] {item.nome} dano : {item.dano} agilidade : {item.agilidade}")
-            print(f"- [{len(self.inventario)}] Saida")
-            if self.arma :  
-                print(f"Arma equipada : {self.arma.nome}")
-            if self.anel :
-                print(f"Anel equipada : {self.anel.nome}")
-            opc = int (input ("> ")) 
-            if opc == fim :
-                return
-            if self.inventario[opc].tipo == "arma" or self.inventario[opc].tipo == "anel" :
-                self.equipar(self.inventario[opc]) 
-
-    def equipar(self,item): 
-        if item not in self.inventario :
-            print(f"{item.nome} Nao esta no inventario")
-            return
-        if item.tipo == 'arma' :
-            if self.arma : 
-                print(f"Desequipando {self.arma.nome}")
-            self.arma = item
-        elif item.tipo == 'anel' :
-            if self.anel : 
-                print(f"Desequipando {self.anel.nome}")
-            self.anel = item
-        print(f"{self.nome} Equipou {item.nome}")
-
-class Equipamento :
-    def __init__(self,nome,dano=0,valor=0,agilidade=0,tipo=None):
-        self.nome = nome
-        self.dano = dano
-        self.valor = valor
-        self.agilidade = agilidade
-        self.tipo = tipo
+from combate import Combate
+from jogador import Jogador
+from loja import Loja
+from partida import Partida
+from equipamento import Equipamento
+from sistema.classes_rpg import CLASSES
 
 
-qj = int(input("Quantos jogadores teremos na partida ? "))
-
-jogadores : list[Jogador] = []
-hp = int(input("Hp dos jogadores : "))
-
-for i in range(qj) :
-    nome = str(input(f"Nome do jogador {i+1} "))
-    jogadores.append(Jogador(nome,hp))
-
-jogadoratual = 0
-espada = Equipamento(nome = "Espada de pedra", dano = 5 , valor = 8, agilidade = 0, tipo = "arma")
-espada2 = Equipamento(nome = "Faca", dano = 3 , valor = 6, agilidade = 2, tipo = "arma")
-anel = Equipamento(nome = "Anel de velocidade", dano = 1 , valor = 6, agilidade = 4, tipo = "anel")
-anel2 = Equipamento(nome = "Anel de forca", dano = 2 , valor = 8, agilidade = 3, tipo = "anel")
-jogadores[0].add_item_inventario(espada)
-jogadores[0].equipar(espada)
+def equipamento_inicial(jogadores: list[Jogador]):
+    """Itens de partida para agilizar o primeiro combate."""
+    if not jogadores:
+        return
+    espada = Equipamento("Espada enferrujada", dado_dano="1d6", valor=5, tipo="arma")
+    escudo = Equipamento("Escudo de madeira", bonus_ca=2, valor=10, tipo="armadura")
+    jogadores[0].add_item_inventario(espada)
+    jogadores[0].equipar(espada)
+    if len(jogadores) > 1:
+        jogadores[1].add_item_inventario(escudo)
+        jogadores[1].equipar(escudo)
 
 
-while True :
+def menu_turno(jogador: Jogador) -> int:
+    magia = "  [4] Conjurar magia\n" if CLASSES[jogador.classe].get("magia") else ""
     print(f"""
-    vez do jogador {jogadores[jogadoratual].nome}
-    [1] Atacar
-    [2] Loja
-    [3] Ver inventario
-    """)
+╔══ Turno de {jogador.nome} ══╗
+  {jogador.status()}
+  [1] Atacar (d20 + mod vs CA)
+  [2] Loja do mercador
+  [3] Inventário / equipar
+{magia}  [5] Descanso curto (1d8+CON)
+  [6] Ver ficha completa
+  [7] Passar turno
+╚══════════════════════════╝""")
+    try:
+        return int(input("Ação: "))
+    except ValueError:
+        return 0
 
-    opc = int (input ("Sua opcao : "))
 
-    if opc == 1 :
-        if qj > 2:
-            for i in range(qj):
-                if i != jogadoratual :
-                    print(f"- [{i}] {jogadores[i].nome}")
-            alvo = int (input ("Escolha quem voce vai atacar"))
-        else :
-            for i in range (qj) :
-                if i != jogadoratual :
-                    alvo = i
-        print(f"{jogadores[jogadoratual].nome} Atacou {jogadores[alvo].nome}")
-        jogadoratual = (jogadoratual + 1) % qj 
+def main():
+    print("=" * 50)
+    print("  ARENA RPG — inspirado em D&D 5ª Edição")
+    print("=" * 50)
 
-    if opc == 2 :
-        pass
+    try:
+        qj = int(input("\nQuantos jogadores? (2-6): "))
+        qj = max(2, min(6, qj))
+    except ValueError:
+        qj = 2
+        print("Usando 2 jogadores.")
 
-    if opc == 3 :
-        jogadores[jogadoratual].mostrar_inventario() 
+    jogadores = Partida.registrar_jogadores(qj)
+    partida = Partida(jogadores)
+    equipamento_inicial(jogadores)
+
+    print("\nRolando iniciativa da rodada 1...")
+    ordem = partida.ordenar_iniciativa()
+    turno_idx = 0
+    descanso_longo_a_cada = 3
+
+    while True:
+        partida.verificar_morte()
+        if partida.fim_partida():
+            break
+
+        if turno_idx >= len(ordem):
+            turno_idx = 0
+            partida.rodada += 1
+            if partida.rodada % descanso_longo_a_cada == 0:
+                print("\n*** Descanso longo entre rodadas — todos recuperam HP ***")
+                for j in partida.jogadores:
+                    j.descanso_longo()
+            print(f"\n>>> Rodada {partida.rodada} <<<")
+            ordem = [j for j in ordem if j in partida.jogadores]
+            if not ordem:
+                break
+
+        jogador = ordem[turno_idx]
+        if jogador not in partida.jogadores:
+            turno_idx += 1
+            continue
+
+        partida.status_geral()
+        opc = menu_turno(jogador)
+
+        if opc == 1:
+            indice = partida.jogadores.index(jogador)
+            Combate(jogador, partida.jogadores, indice).atacar()
+            turno_idx += 1
+        elif opc == 2:
+            Loja.abrir(jogador)
+        elif opc == 3:
+            jogador.mostrar_inventario()
+        elif opc == 4 and CLASSES[jogador.classe].get("magia"):
+            indice = partida.jogadores.index(jogador)
+            Combate(jogador, partida.jogadores, indice).acao_magia()
+            turno_idx += 1
+        elif opc == 5:
+            jogador.descanso_curto()
+            turno_idx += 1
+        elif opc == 6:
+            jogador.mostrar_ficha()
+        elif opc == 7:
+            turno_idx += 1
+        else:
+            print("Opção inválida.")
+
+
+if __name__ == "__main__":
+    main()
