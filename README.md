@@ -27,10 +27,11 @@ Este projeto é executado localmente no terminal, sem deploy web.
 
 ## 📦 Como rodar localmente
 
-1. Abra o terminal e entre na pasta do projeto:
+1. Clone o repositório e entre na pasta:
 
 ```bash
-cd "D:\Meus Trabalhos\Projetos\RPG\RPG"
+git clone https://github.com/thiagokuster/RPG_game.git
+cd RPG_game
 ```
 
 2. Verifique se o Python está instalado:
