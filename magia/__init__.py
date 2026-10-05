@@ -1,0 +1,1 @@
+from .magia import Magia

@@ -1,5 +1,4 @@
 from jogador import Jogador
-from equipamento import Equipamento
 from combate import Combate
 from partida import Partida
 from loja import Loja
@@ -37,18 +36,35 @@ while True:
     jog = jogadores[jogatual]
     loja.turno = turno
 
+    evento = partida.gerar_evento_monstro(rodada)
+    if evento:
+        partida.resolver_evento_monstro(jog, evento)
+        if jog.hp <= 0:
+            partida.verificar_mortos()
+            if partida.fim_partida():
+                break
+        jogatual = (jogatual + 1) % len(jogadores)
+        if jogatual == 0:
+            loja.chance_att_loja()
+            rodada += 1
+        turno += 1
+        continue
+
     Partida.menu(jogadores=jogadores, jog=jog, turno=turno)
     opc = Partida.validar_opc([1, 2, 3], "Suas opcoes : ")
 
     if opc == 1:
         combate = Combate(jog=jogadores[jogatual], jogadores=jogadores, indice=jogatual)
-        if combate.atacar():
+        acerto = combate.atacar()
+        if acerto:
             Partida.ganhar_moeda(rodada=rodada, jog=jog)
-            jogatual = (jogatual + 1) % len(jogadores)
-            if jogatual == 0:
-                loja.chance_att_loja()
-                rodada += 1
-            turno += 1
+            jog.ganhar_experiencia(25)
+
+        jogatual = (jogatual + 1) % len(jogadores)
+        if jogatual == 0:
+            loja.chance_att_loja()
+            rodada += 1
+        turno += 1
 
     elif opc == 2:
         loja.entrar_loja(jog)
@@ -59,6 +75,10 @@ while True:
 
     elif opc == 3:
         jogadores[jogatual].mostrar_inventario()
+        jogatual = (jogatual + 1) % len(jogadores)
+        if jogatual == 0:
+            rodada += 1
+        turno += 1
 
     else:
         print("Opcao invalida")

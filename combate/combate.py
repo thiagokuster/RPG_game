@@ -40,13 +40,25 @@ class Combate:
     def atacar(self):
         if not self.escolher_alvo():
             return False
-        d20 = self.jog.d20()
-        if d20 > 10:
-            d10 = self.jog.d10()
-            danotot = self.jog.danotot(d10, d20)
-            self.alvo.hp -= danotot
-            print(f"{self.alvo.nome} perdeu {danotot} de HP!")
-        else:
-            print("Errou o ataque")
 
+        dado_ataque = self.jog.d20()
+        bonus_ataque = self.jog.ataque_bonus + self.jog.proficiencia
+        ataque_total = dado_ataque + bonus_ataque
+
+        if ataque_total < self.alvo.armor_class:
+            print(f"{self.alvo.nome} resistiu ao ataque! Defesa: {self.alvo.armor_class}")
+            return False
+
+        d10 = self.jog.d10()
+        dano = self.jog.danotot(d10, dado_ataque)
+
+        if dado_ataque == 20:
+            dano *= 2
+            print("CRITICO! Dano dobrado.")
+
+        if self.jog.arma and self.jog.arma.bonus_ataque:
+            dano += self.jog.arma.bonus_ataque
+
+        self.alvo.hp -= dano
+        print(f"{self.alvo.nome} perdeu {dano} de HP!")
         return True
