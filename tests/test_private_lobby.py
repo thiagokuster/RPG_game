@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from private.site import PrivateLobby
+from private.lobby import PrivateLobby
 
 
 class TestPrivateLobby(unittest.TestCase):

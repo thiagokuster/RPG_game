@@ -12,7 +12,7 @@ from monstro import Monstro
 from online.client import GameClient
 from online.server import LobbyServer
 from partida import Partida
-from private.site import PrivateLobby
+from private.lobby import PrivateLobby
 
 
 def silenciar_sleep():

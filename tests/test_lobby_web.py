@@ -1,7 +1,7 @@
 import unittest
 
 from equipamento import Equipamento
-from private.site import PrivateLobby
+from private.lobby import PrivateLobby
 
 
 class TestLobbyWeb(unittest.TestCase):

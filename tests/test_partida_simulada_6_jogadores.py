@@ -10,7 +10,8 @@ from combate import resolver_ataque
 from jogador import Jogador
 from partida import Partida
 import private.site as site
-from private.site import LobbyRequestHandler, PrivateLobby
+from private.lobby import PrivateLobby
+from private.site import LobbyRequestHandler
 
 
 def silenciar_sleep():
