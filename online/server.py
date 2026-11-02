@@ -1,5 +1,4 @@
 import json
-import os
 import random
 import socket
 import threading
@@ -9,7 +8,7 @@ from combate import resolver_ataque
 from equipamento import Equipamento
 from jogador import Jogador
 from partida import Partida
-from private.limits import sanitize_name, sanitize_password
+from web.limits import RateLimiter, hash_secret, sanitize_name, sanitize_password
 
 from .protocol import receive_message, send_message
 
@@ -17,7 +16,7 @@ from .protocol import receive_message, send_message
 class LobbyServer:
     MAX_PLAYERS = 6
 
-    def __init__(self, host="0.0.0.0", port=5000, state_path=None):
+    def __init__(self, host="127.0.0.1", port=5000, state_path=None):
         self.host = host
         self.port = port
         self.state_path = Path(state_path) if state_path else Path("data") / "rooms.json"
@@ -25,6 +24,8 @@ class LobbyServer:
         self.connections = {}
         self.room_state = {}
         self.lock = threading.Lock()
+        self.limiter = RateLimiter(limit=40, window=10)
+        self.join_limiter = RateLimiter(limit=8, window=60)
         self._ensure_state_file()
         self.load_state()
 
@@ -164,7 +165,7 @@ class LobbyServer:
             if state["current_turn"] is None and state["order"]:
                 state["current_turn"] = state["order"][0]
             if senha and not state.get("password"):
-                state["password"] = senha
+                state["password"] = hash_secret(senha)
             self.connections[conn] = {"player": player_name, "room": room_name}
 
         payload_reply = {
@@ -282,7 +283,7 @@ class LobbyServer:
 
         with self.lock:
             state = self._ensure_room_state(room_name)
-            if state.get("password") and state["password"] != senha:
+            if state.get("password") and state["password"] != hash_secret(senha):
                 send_message(conn, {"type": "error", "message": "Senha da sala inválida."})
                 return
             members = self.rooms.setdefault(room_name, [])
@@ -679,6 +680,13 @@ class LobbyServer:
                 payload = receive_message(conn)
                 if payload is None:
                     break
+                origem = addr[0] if addr else "desconhecido"
+                if payload.get("type") in {"join", "create_room"} and not self.join_limiter.check(origem):
+                    send_message(conn, {"type": "error", "message": "Muitas tentativas de entrada. Aguarde um pouco."})
+                    continue
+                if not self.limiter.check(origem):
+                    send_message(conn, {"type": "error", "message": "Muitas mensagens. Tente novamente em instantes."})
+                    continue
                 self._handle_message(conn, payload)
         except (ConnectionResetError, OSError, ValueError):
             pass
@@ -691,10 +699,12 @@ class LobbyServer:
         port = port or self.port
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
             server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            if host in {"0.0.0.0", "::"}:
+                print("Aviso: o servidor está escutando em todas as interfaces. Use só em rede confiável.")
             server_socket.bind((host, port))
             server_socket.listen()
             self.host, self.port = server_socket.getsockname()[:2]
-            print(f"Servidor de RPG online rodando em {self.host}:{self.port}")
+            print(f"Servidor TCP do Arena RPG em {self.host}:{self.port}")
             if ready is not None:
                 ready.set()
             while True:

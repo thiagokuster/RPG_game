@@ -1,0 +1,22 @@
+[project]
+name = "arena-rpg"
+version = "1.0.0"
+description = "RPG de arena por turnos para partidas locais entre amigos."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+[project.optional-dependencies]
+dev = ["ruff>=0.8"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = ["F401"]
+"web/site.py" = ["E402"]

@@ -5,7 +5,7 @@ import urllib.error
 import urllib.request
 from http.server import ThreadingHTTPServer
 
-from private.site import FRONTEND_DIR, LobbyRequestHandler, lobby
+from web.site import FRONTEND_DIR, LobbyRequestHandler, lobby
 
 
 class TestFrontendBackend(unittest.TestCase):

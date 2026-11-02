@@ -78,8 +78,8 @@ class Loja:
             sleep(1)
         print("-=" * 30)
         print(f"[-3] Comprar +1 slot ({self.preco_slot} moedas)")
-        print(f"[-2] Atualizar a loja (5 moedas)")
-        print(f"[-1] Sair")
+        print("[-2] Atualizar a loja (5 moedas)")
+        print("[-1] Sair")
         print(f"Suas moedas: {jog.moedas}")
 
     def compra(self, jog: Jogador):

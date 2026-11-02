@@ -1,12 +1,12 @@
 import unittest
 
 from equipamento import Equipamento
-from private.lobby import PrivateLobby
+from web.lobby import Lobby
 
 
 class TestLobbyWeb(unittest.TestCase):
     def setUp(self):
-        self.lobby = PrivateLobby()
+        self.lobby = Lobby()
         self.room = self.lobby.create_room("Alice")
         self.lobby.join_room("Bob", self.room["code"])
         self.lobby.start_match(self.room["code"], {"Alice": "Guerreiro", "Bob": "Mago"}, token=self.lobby.token_of(self.room["code"], "Alice"))

@@ -1,4 +1,4 @@
-from private.site import main
+from web.site import main
 
 
 if __name__ == "__main__":

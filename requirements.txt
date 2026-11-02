@@ -1,0 +1,2 @@
+# Runtime: somente a biblioteca padrão do Python 3.10+.
+# Desenvolvimento: pip install ruff

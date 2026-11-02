@@ -1,12 +1,13 @@
 import unittest
 from unittest.mock import patch
 
-from private.lobby import PrivateLobby
+from web.limits import RateLimiter, hash_secret
+from web.lobby import Lobby
 
 
-class TestPrivateLobby(unittest.TestCase):
+class TestLobby(unittest.TestCase):
     def test_criar_e_entrar_na_sala(self):
-        lobby = PrivateLobby()
+        lobby = Lobby()
         created = lobby.create_room("Alice")
 
         self.assertEqual(created["players"][0]["name"], "Alice")
@@ -16,7 +17,7 @@ class TestPrivateLobby(unittest.TestCase):
         self.assertIn("Bob", [player["name"] for player in joined["players"]])
 
     def test_iniciar_partida_define_turno_inicial(self):
-        lobby = PrivateLobby()
+        lobby = Lobby()
         room = lobby.create_room("Alice")
         lobby.join_room("Bob", room["code"])
 
@@ -27,7 +28,7 @@ class TestPrivateLobby(unittest.TestCase):
         self.assertEqual(len(match["players"]), 2)
 
     def test_ataque_avanca_para_o_proximo_turno(self):
-        lobby = PrivateLobby()
+        lobby = Lobby()
         room = lobby.create_room("Alice")
         lobby.join_room("Bob", room["code"])
         lobby.start_match(room["code"], classes={"Alice": "Guerreiro", "Bob": "Mago"}, token=lobby.token_of(room["code"], "Alice"))
@@ -38,9 +39,9 @@ class TestPrivateLobby(unittest.TestCase):
         self.assertIn(result["next_turn"], ["Alice", "Bob", None])
 
     def test_turno_pula_jogadores_mortos(self):
-        lobby = PrivateLobby()
+        lobby = Lobby()
         room = lobby.create_room("Alice")
-        lobby.join_room("Bob", room["code"]) 
+        lobby.join_room("Bob", room["code"])
         lobby.join_room("Charlie", room["code"])
         lobby.start_match(room["code"], classes={
             "Alice": "Guerreiro",
@@ -63,21 +64,21 @@ class TestPrivateLobby(unittest.TestCase):
         self.assertEqual(room_data["current_turn"], "Charlie")
 
     def test_nao_pode_iniciar_partida_com_menos_de_dois_jogadores(self):
-        lobby = PrivateLobby()
+        lobby = Lobby()
         room = lobby.create_room("Alice")
 
         with self.assertRaisesRegex(ValueError, "pelo menos dois jogadores"):
             lobby.start_match(room["code"], token=lobby.token_of(room["code"], "Alice"))
 
     def test_nao_pode_entrar_com_nome_duplicado(self):
-        lobby = PrivateLobby()
+        lobby = Lobby()
         room = lobby.create_room("Alice")
 
         with self.assertRaisesRegex(ValueError, "já existe"):
             lobby.join_room("Alice", room["code"])
 
     def test_criar_sala_reutiliza_codigo_do_mesmo_anfitriao(self):
-        lobby = PrivateLobby()
+        lobby = Lobby()
         primeira = lobby.create_room("Alice")
         segunda = lobby.create_room("Alice")
         terceira = lobby.create_room("Alice")
@@ -87,7 +88,7 @@ class TestPrivateLobby(unittest.TestCase):
         self.assertEqual(len(lobby.list_rooms()["rooms"]), 1)
 
     def test_sala_recusa_setimo_jogador(self):
-        lobby = PrivateLobby()
+        lobby = Lobby()
         room = lobby.create_room("Ana")
         for nome in ["Bruno", "Carla", "Diego", "Eva", "Fabio"]:
             lobby.join_room(nome, room["code"])
@@ -97,10 +98,12 @@ class TestPrivateLobby(unittest.TestCase):
         self.assertEqual(len(lobby.get_room(room["code"])["room"]["players"]), 6)
 
     def test_sala_protegida_exige_senha(self):
-        lobby = PrivateLobby()
+        lobby = Lobby()
         room = lobby.create_room("Alice", password="segredo1")
         self.assertTrue(room["protected"])
         self.assertNotIn("password", room)
+        self.assertEqual(lobby.rooms[room["code"]]["password"], hash_secret("segredo1"))
+        self.assertNotEqual(lobby.rooms[room["code"]]["password"], "segredo1")
 
         with self.assertRaisesRegex(ValueError, "Senha"):
             lobby.join_room("Bob", room["code"])
@@ -108,12 +111,12 @@ class TestPrivateLobby(unittest.TestCase):
         self.assertIn("Bob", [player["name"] for player in joined["players"]])
 
     def test_rejeita_nome_invalido(self):
-        lobby = PrivateLobby()
+        lobby = Lobby()
         with self.assertRaisesRegex(ValueError, "inválidos"):
             lobby.create_room("Ana<script>")
 
     def test_nao_pode_reiniciar_partida_ja_iniciada(self):
-        lobby = PrivateLobby()
+        lobby = Lobby()
         room = lobby.create_room("Alice")
         lobby.join_room("Bob", room["code"])
         lobby.start_match(room["code"], classes={"Alice": "Guerreiro", "Bob": "Mago"}, token=lobby.token_of(room["code"], "Alice"))
@@ -122,7 +125,7 @@ class TestPrivateLobby(unittest.TestCase):
             lobby.start_match(room["code"], classes={"Alice": "Guerreiro", "Bob": "Mago"}, token=lobby.token_of(room["code"], "Alice"))
 
     def test_somente_anfitriao_inicia_e_token_impede_impersonacao(self):
-        lobby = PrivateLobby()
+        lobby = Lobby()
         room = lobby.create_room("Alice")
         lobby.join_room("Bob", room["code"])
         classes = {"Alice": "Guerreiro", "Bob": "Mago"}
@@ -146,7 +149,7 @@ class TestPrivateLobby(unittest.TestCase):
         self.assertNotIn("tokens", snapshot)
 
     def test_ataque_concede_experiencia_e_cura_nao_ressuscita(self):
-        lobby = PrivateLobby()
+        lobby = Lobby()
         room = lobby.create_room("Alice")
         lobby.join_room("Bob", room["code"])
         lobby.start_match(
@@ -180,6 +183,15 @@ class TestPrivateLobby(unittest.TestCase):
         )
         self.assertEqual(cura.get("type"), "error")
         self.assertEqual(alice.hp, 0)
+
+
+class TestRateLimiter(unittest.TestCase):
+    def test_bloqueia_apos_o_limite_por_origem(self):
+        limiter = RateLimiter(limit=2, window=60)
+        self.assertTrue(limiter.check("127.0.0.1"))
+        self.assertTrue(limiter.check("127.0.0.1"))
+        self.assertFalse(limiter.check("127.0.0.1"))
+        self.assertTrue(limiter.check("10.0.0.2"))
 
 
 if __name__ == "__main__":

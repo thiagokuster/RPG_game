@@ -9,9 +9,9 @@ from unittest.mock import patch
 from combate import resolver_ataque
 from jogador import Jogador
 from partida import Partida
-import private.site as site
-from private.lobby import PrivateLobby
-from private.site import LobbyRequestHandler
+import web.site as site
+from web.lobby import Lobby
+from web.site import LobbyRequestHandler
 
 
 def silenciar_sleep():
@@ -135,7 +135,7 @@ class TestPartidaSimulada6Jogadores(unittest.TestCase):
             print(f"- {linha}")
 
     def test_lobby_cria_uma_sala_e_joga_com_seis(self):
-        lobby = PrivateLobby()
+        lobby = Lobby()
         sala = lobby.create_room("Ana")
         codigo = sala["code"]
 
@@ -204,7 +204,7 @@ class TestHttpNaoCriaSalaInfinita(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._original_lobby = site.lobby
-        site.lobby = PrivateLobby()
+        site.lobby = Lobby()
         cls.server = ThreadingHTTPServer(("127.0.0.1", 0), LobbyRequestHandler)
         cls.port = cls.server.server_address[1]
         cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)

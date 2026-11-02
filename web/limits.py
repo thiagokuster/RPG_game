@@ -1,3 +1,4 @@
+import hashlib
 import secrets
 import time
 from threading import Lock
@@ -45,6 +46,12 @@ def sanitize_magic(name):
     if len(name) > MAX_MAGIC:
         raise ValueError("Nome de magia inválido.")
     return name
+
+
+def hash_secret(value):
+    if not value:
+        return ""
+    return hashlib.sha256(f"arena-rpg|{value}".encode("utf-8")).hexdigest()
 
 
 def issue_token():

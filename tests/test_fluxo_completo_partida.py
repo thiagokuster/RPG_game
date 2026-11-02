@@ -14,7 +14,6 @@ class TestFluxoCompletoPartida(unittest.TestCase):
         guerreiro = Jogador.criar_por_classe("Guerreiro", "Guerreiro")
         guerreiro.magias.append(Magia.bola_de_fogo())
         mago = Jogador.criar_por_classe("Mago", "Mago")
-        partida = Partida([guerreiro, mago])
         loja = Loja()
 
         loja.estoque = [

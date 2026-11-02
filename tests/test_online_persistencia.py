@@ -26,7 +26,7 @@ class TestIntegracaoPrivate(unittest.TestCase):
 
         try:
             server._handle_join(conn_a, {"type": "join", "player": "Alice", "room": "Sala 1"})
-            reproducao = server._handle_join(conn_b, {"type": "join", "player": "Bob", "room": "Sala 1"})
+            server._handle_join(conn_b, {"type": "join", "player": "Bob", "room": "Sala 1"})
             server._handle_message(conn_a, {
                 "type": "start_match",
                 "room": "Sala 1",

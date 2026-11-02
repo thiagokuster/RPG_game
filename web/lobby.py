@@ -5,9 +5,10 @@ from combate import resolver_ataque
 from equipamento import Equipamento
 from jogador import Jogador
 from partida import Partida
-from private.limits import (
+from web.limits import (
     ALLOWED_ACTIONS,
     ALLOWED_CLASSES,
+    hash_secret,
     issue_token,
     sanitize_magic,
     sanitize_name,
@@ -17,7 +18,7 @@ from private.limits import (
 )
 
 
-class PrivateLobby:
+class Lobby:
     MAX_PLAYERS = 6
 
     def __init__(self):
@@ -158,7 +159,7 @@ class PrivateLobby:
                 "winner": None,
                 "turn_order": [name],
                 "match": None,
-                "password": senha or None,
+                "password": hash_secret(senha) or None,
                 "tokens": {},
                 "rodada": 1,
                 "log": [{"text": f"{name} criou a sala."}],
@@ -176,7 +177,7 @@ class PrivateLobby:
             room = self.rooms.get(room_name)
             if room is None:
                 raise KeyError(f"Sala {room_name} não encontrada.")
-            if room.get("password") and room["password"] != senha:
+            if room.get("password") and room["password"] != hash_secret(senha):
                 raise ValueError("Senha da sala inválida.")
             if room.get("status") == "started" and room.get("match") is not None:
                 raise ValueError("A partida já foi iniciada. Não é possível entrar na sala durante o jogo.")

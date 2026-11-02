@@ -9,15 +9,16 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from private.events import EventBus
-from private.limits import MAX_BODY, RateLimiter, sanitize_name, sanitize_password, sanitize_room
-from private.lobby import PrivateLobby
+from web.events import EventBus
+from web.limits import MAX_BODY, RateLimiter, sanitize_name, sanitize_password, sanitize_room
+from web.lobby import Lobby
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
-lobby = PrivateLobby()
+lobby = Lobby()
 events = EventBus()
 limiter = RateLimiter(limit=60, window=10)
+join_limiter = RateLimiter(limit=8, window=60)
 
 
 class LobbyRequestHandler(BaseHTTPRequestHandler):
@@ -144,6 +145,9 @@ class LobbyRequestHandler(BaseHTTPRequestHandler):
                 self._publish(result.get("code"))
                 return
             if parsed.path == "/api/join-room":
+                if not join_limiter.check(self.client_address[0]):
+                    self._send_json({"error": "Muitas tentativas de entrada. Aguarde um pouco."}, 429)
+                    return
                 result = lobby.join_room(
                     sanitize_name(payload.get("player", "")),
                     sanitize_room(payload.get("room", "")),

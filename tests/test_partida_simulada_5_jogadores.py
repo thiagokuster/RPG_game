@@ -12,7 +12,7 @@ from monstro import Monstro
 from online.client import GameClient
 from online.server import LobbyServer
 from partida import Partida
-from private.lobby import PrivateLobby
+from web.lobby import Lobby
 
 
 def silenciar_sleep():
@@ -194,7 +194,7 @@ class TestPartidaSimulada5Jogadores(unittest.TestCase):
             print(f"- {linha}")
 
     def test_lobby_web_com_cinco_jogadores(self):
-        lobby = PrivateLobby()
+        lobby = Lobby()
         sala = lobby.create_room("Ana")
         codigo = sala["code"]
         for nome in ["Bruno", "Carla", "Diego", "Eva"]:

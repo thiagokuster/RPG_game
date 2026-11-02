@@ -5,7 +5,7 @@ from pathlib import Path
 
 from equipamento import Equipamento
 from online.server import LobbyServer
-from private.client import GameClient
+from online.client import GameClient
 
 
 class TestPrivateClient(unittest.TestCase):
@@ -59,7 +59,6 @@ class TestPrivateClient(unittest.TestCase):
                 "room": "Sala privada",
                 "classes": {"Alice": "Guerreiro", "Bob": "Mago"},
             })
-            jogador = self.server.room_state["Sala privada"]["match"].jogadores[0]
             item = Equipamento.gerarEquipamento(1)
             self.server.room_state["Sala privada"]["shop"] = [item]
 
