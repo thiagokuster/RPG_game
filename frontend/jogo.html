@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arena RPG - Tabuleiro</title>
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <h1 id="roomLabel">Sala</h1>
+      <a class="badge" href="/">Voltar ao lobby</a>
+    </header>
+    <div class="layout">
+      <section class="panel table">
+        <div class="turn" id="turnBanner">Conectando...</div>
+        <div class="seats" id="seats"></div>
+        <div class="log" id="log"></div>
+      </section>
+      <aside class="panel actions">
+        <h2>Seu lance</h2>
+        <div class="status" id="status">O backend valida cada jogada, como no xadrez.</div>
+        <label for="targetSelect">Alvo</label>
+        <select id="targetSelect"></select>
+        <label for="magicSelect">Magia</label>
+        <select id="magicSelect"></select>
+        <label for="shopSelect">Loja</label>
+        <select id="shopSelect"></select>
+        <label for="itemSelect">Inventario</label>
+        <select id="itemSelect"></select>
+        <div class="row">
+          <button type="button" class="danger" id="attackBtn">Atacar</button>
+          <button type="button" class="primary" id="magicBtn">Magia</button>
+        </div>
+        <div class="row">
+          <button type="button" class="ghost" id="shopBtn">Atualizar loja</button>
+          <button type="button" class="ghost" id="buyBtn">Comprar</button>
+          <button type="button" class="ghost" id="equipBtn">Equipar</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+  <script src="/js/api.js"></script>
+  <script src="/js/jogo.js"></script>
+</body>
+</html>

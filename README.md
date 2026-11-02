@@ -1,176 +1,72 @@
 # Arena RPG 5e
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python" alt="Python 3.10+" />
-  <img src="https://img.shields.io/badge/Status-Playable-success?style=for-the-badge" alt="Playable" />
-  <img src="https://img.shields.io/badge/Mode-Terminal-000000?style=for-the-badge" alt="Terminal" />
-</p>
+RPG de arena por turnos, no estilo 5e, para partidas locais entre amigos. Dá para jogar no terminal, no lobby web ou por TCP na mesma rede.
 
-Um jogo de RPG em terminal inspirado em fantasia medieval, com turnos de combate, classes, magia, monstros aleatórios, loja, inventário e progressão de personagem.
+## 🚀 Demo
 
-## Índice
+Não há deploy público. A partida roda na sua máquina ou na rede interna:
 
-- [Visão geral](#visão-geral)
-- [Como jogar](#como-jogar)
-- [Classes](#classes)
-- [Como executar](#como-executar)
-- [Estrutura do projeto](#estrutura-do-projeto)
-- [Testes](#testes)
-- [Licença](#licença)
+- Lobby web: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+- Servidor TCP: `127.0.0.1:5000`
 
-## Visão geral
+## 🛠️ Tecnologias
 
-Arena RPG 5e é um projeto simples, divertido e fácil de executar em terminal. A partida é jogada por turnos e pode se desenvolver de várias formas:
+- Python 3.10+ (biblioteca padrão)
+- HTTP + SSE para o lobby web
+- HTML, CSS e JavaScript no frontend
+- TCP com mensagens JSON para o modo online
+- `unittest` para os testes
 
-- um único jogador sobrevive e vence a partida
-- todos os jogadores morrem e a partida termina sem vencedor
-- monstros aleatórios podem mudar completamente o rumo da batalha
+## ✨ Funcionalidades
 
-O foco é manter partidas tensas, rápidas de entender e interessantes para grupos de jogadores.
+- Cinco classes: Guerreiro, Mago, Arqueiro, Paladino e Clérigo
+- Combate por turnos com ataque, magia, loja e inventário
+- Armadura com redução de dano e durabilidade
+- Eventos aleatórios (tesouro, aposta, risco e monstros)
+- Lobby web com salas, senha opcional e no máximo 6 jogadores
+- Sessão por token: só o anfitrião inicia, e cada jogador age pela própria identidade
+- Servidor TCP com reconexão após reinício
+- Partida no terminal para um grupo no mesmo computador
 
-## Como jogar
+## 📦 Como rodar localmente
 
-### 1. Início da partida
+```bash
+git clone https://github.com/thiagokuster/RPG_game.git
+cd RPG_game
+```
 
-Ao iniciar o jogo, o programa pergunta quantos jogadores participarão. O mínimo é 2.
+Não precisa instalar dependências extras. Use o Python 3.10 ou superior.
 
-### 2. Escolha da classe
+### Lobby web (recomendado para amigos)
 
-Cada jogador escolhe uma classe antes da partida começar:
+```bash
+python private_site.py --host 127.0.0.1 --port 8000
+```
 
-- [1] Guerreiro
-- [2] Mago
-- [3] Arqueiro
-- [4] Paladino
-- [5] Clerigo
+Abra [http://127.0.0.1:8000](http://127.0.0.1:8000), crie a sala, compartilhe o código e inicie quando houver pelo menos dois jogadores.
 
-### 3. Menu principal
+Na rede interna, use `--host 0.0.0.0` só em rede confiável. Os outros acessam `http://SEU_IP:8000`.
 
-A cada turno, o jogador atual verá as opções:
+### Terminal
 
-- [1] Atacar
-- [2] Loja
-- [3] Inventário
-
-### 4. Sistema de combate
-
-Ao escolher atacar:
-
-- o jogo mostra os alvos disponíveis
-- você deve escolher um alvo diferente de si mesmo
-- o ataque usa d20 + bônus de ataque + proficiência
-- se o valor total for menor que a CA do alvo, o ataque falha
-- em caso de acerto, o dano é calculado e pode criticar em 20 natural
-
-### 5. Loja e inventário
-
-Na loja, os jogadores podem:
-
-- comprar itens do estoque
-- atualizar a loja
-- comprar mais espaço para o inventário
-
-No inventário, é possível ver todos os itens adquiridos e equipá-los quando fizer sentido.
-
-### 6. Monstros e eventos aleatórios
-
-Em algumas rodadas, um monstro pode aparecer e surpreender o jogador atual. Quando isso acontece, a luta continua até que alguém seja derrotado.
-
-Se o monstro for vencido, o jogador recebe recompensas e experiência.
-
-### 7. Condição de vitória
-
-A partida termina quando:
-
-- resta apenas um jogador vivo → esse jogador vence
-- todos os jogadores morrem → não há vencedor
-
-### 8. Dicas rápidas
-
-- conserve vida quando possível
-- aproveite a loja no momento certo
-- classes com magia podem mudar completamente o rumo da partida
-- partidas com mais jogadores costumam durar mais e serem mais emocionantes
-
-## Classes
-
-| Classe | Estilo | Vantagem principal |
-| --- | --- | --- |
-| Guerreiro | Força e resistência | Muito HP e dano consistente |
-| Mago | Magia ofensiva | Dano mágico e cura |
-| Arqueiro | Precisão | Ataques ágeis e efetivos |
-| Paladino | Equilíbrio | Defesa e apoio |
-| Clerigo | Cura e suporte | Recuperação e magia utilitária |
-
-## Como executar
-
-### Windows / PowerShell
-
-```powershell
-cd "D:\Meus Trabalhos\Projetos\RPG"
+```bash
 python main.py
 ```
 
-### Linux / macOS
+### Servidor TCP
 
 ```bash
-cd /caminho/para/o/projeto
-python main.py
+python private_server.py --host 127.0.0.1 --port 5000
 ```
 
-Se o comando `python` não funcionar, tente:
+Em outro terminal, para cada jogador:
 
 ```bash
-python3 main.py
+python private_client.py --host 127.0.0.1 --port 5000 --player NomeDoJogador --room Sala1
 ```
 
-## Estrutura do projeto
-
-```text
-RPG/
-├── main.py
-├── README.md
-├── LICENSE
-├── .gitignore
-├── tests/
-│   ├── test_combate.py
-│   └── test_sistema_avancado.py
-├── combate/
-│   ├── __init__.py
-│   └── combate.py
-├── equipamento/
-│   ├── __init__.py
-│   └── equipamento.py
-├── jogador/
-│   ├── __init__.py
-│   └── jogador.py
-├── loja/
-│   ├── __init__.py
-│   └── loja.py
-├── magia/
-│   ├── __init__.py
-│   └── magia.py
-├── monstro/
-│   ├── __init__.py
-│   └── monstro.py
-├── partida/
-│   ├── __init__.py
-│   └── partida.py
-└── ...
-```
-
-## Testes
-
-Para validar o funcionamento do jogo, execute:
+### Testes
 
 ```bash
-python -m unittest discover -s tests -v
+python -m unittest discover -s tests -q
 ```
-
-## Licença
-
-Este projeto está distribuído sob a licença MIT.
-
-## Autor
-
-Projeto desenvolvido em Python como estudo de lógica de RPG, combate por turno e estrutura de jogo em terminal.

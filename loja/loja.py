@@ -1,16 +1,19 @@
-from equipamento import Equipamento
-from jogador import Jogador
 from time import sleep
 from random import randint
+
+from equipamento import Equipamento
+from jogador import Jogador
 
 
 class Loja:
 
-    def __init__(self):
+    def __init__(self, popular=True):
         self.estoque: list[Equipamento] = []
         self.slot = 3
         self.preco_slot = 3
         self.turno = 1
+        if popular:
+            self.att_loja(anunciar=False)
 
     def entrar_loja(self, jog: Jogador):
         while True:
@@ -26,16 +29,18 @@ class Loja:
         jog.moedas -= valor
         return True
 
-    def novo_equip(self):
-        equip = Equipamento.gerarEquipamento(self.turno)
+    def novo_equip(self, tipo=None):
+        if tipo:
+            equip = Equipamento.gerar_por_categoria(self.turno, tipo)
+        else:
+            equip = Equipamento.gerarEquipamento(self.turno)
         self.estoque.append(equip)
 
-    def att_loja(self):
-        print("Loja Atualizada!")
-        sleep(0.6)
-        self.estoque = []
-        for _ in range(self.slot):
-            self.novo_equip()
+    def att_loja(self, anunciar=True):
+        if anunciar:
+            print("Loja Atualizada!")
+            sleep(0.6)
+        self.estoque = Equipamento.gerar_estoque(self.turno, self.slot)
 
     def chance_att_loja(self):
         fim = 3
@@ -49,11 +54,25 @@ class Loja:
             self.att_loja()
         return
 
+    def _por_categoria(self):
+        grupos = {"arma": [], "armadura": [], "anel": []}
+        for item in self.estoque:
+            grupos.setdefault(item.tipo or "arma", []).append(item)
+        return grupos
+
     def mostrar_loja(self, jog: Jogador):
         print("\n=== LOJA ===")
         if self.estoque:
-            for i, e in enumerate(self.estoque):
-                print(f"[{i}] {e.nome} {e.raridade} | Dano: {e.dano} | {e.valor} moedas")
+            titulos = {"arma": "ARMAS", "armadura": "ARMADURAS", "anel": "ACESSORIOS"}
+            grupos = self._por_categoria()
+            for tipo in ("arma", "armadura", "anel"):
+                itens = grupos.get(tipo) or []
+                if not itens:
+                    continue
+                print(f"-- {titulos[tipo]} --")
+                for item in itens:
+                    indice = self.estoque.index(item)
+                    print(f"[{indice}] {item.descricao()}")
         else:
             print("Nenhum equipamento disponivel na loja!")
             sleep(1)
@@ -89,4 +108,3 @@ class Loja:
                 jog.adicionar_item_inventario(self.estoque[indice])
                 self.estoque.remove(self.estoque[indice])
         return True
-    

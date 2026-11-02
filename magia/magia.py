@@ -49,3 +49,12 @@ class Magia:
             custo=2,
             descricao="Ataque místico poderoso para causar dano.",
         )
+
+    @classmethod
+    def nomes_conhecidos(cls):
+        return [
+            cls.bola_de_fogo().nome,
+            cls.cura_leve().nome,
+            cls.rajada_congelante().nome,
+            cls.golpe_de_energia().nome,
+        ]

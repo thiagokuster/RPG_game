@@ -39,8 +39,13 @@ class Monstro:
     def atacar(self, alvo):
         ataque = randint(1, 20) + self.ataque_bonus
         if ataque >= getattr(alvo, "armor_class", 12):
-            dano = randint(1, self.dano) + max(1, self.ataque_bonus // 2)
-            alvo.hp = max(0, alvo.hp - dano)
+            bruto = randint(1, self.dano) + max(1, self.ataque_bonus // 2)
+            if hasattr(alvo, "receber_dano"):
+                aplicado = alvo.receber_dano(bruto)
+                dano = aplicado["dano"]
+            else:
+                alvo.hp = max(0, getattr(alvo, "hp", 0) - bruto)
+                dano = bruto
             print(f"{self.nome} atingiu {alvo.nome} e causou {dano} de dano!")
             return dano
         print(f"{self.nome} errou o ataque contra {alvo.nome}.")

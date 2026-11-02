@@ -31,7 +31,9 @@ class TestCombate(unittest.TestCase):
         atacante.ataque_bonus = 2
         atacante.proficiencia = 2
 
+        hp_antes = alvo.hp
         self.assertTrue(combate.atacar())
+        self.assertEqual(alvo.hp, hp_antes - 33)
 
 
 if __name__ == "__main__":

@@ -28,5 +28,8 @@ Thumbs.db
 temp/
 tmp/
 
+# Runtime lobby state
+data/*.json
+
 # Project duplicates and local copies
 "RPG python com DxD/"

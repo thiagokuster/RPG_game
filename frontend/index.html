@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arena RPG</title>
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <h1>Arena RPG</h1>
+      <div class="badge">Lobby</div>
+    </header>
+    <div class="layout">
+      <section class="panel stack">
+        <div>
+          <h2>Criar partida</h2>
+          <label for="playerName">Seu nome</label>
+          <input id="playerName" maxlength="24" placeholder="Ana" />
+          <label for="createPassword">Senha da sala (opcional)</label>
+          <input id="createPassword" maxlength="16" type="password" placeholder="4 a 16 caracteres" />
+          <button type="button" class="primary" id="createRoomBtn">Criar sala</button>
+          <div class="status" id="createStatus"></div>
+        </div>
+        <div>
+          <h2>Entrar com codigo</h2>
+          <label for="joinName">Seu nome</label>
+          <input id="joinName" maxlength="24" placeholder="Bruno" />
+          <label for="roomCode">Codigo da sala</label>
+          <input id="roomCode" maxlength="8" placeholder="ABC123" />
+          <label for="joinPassword">Senha da sala (se houver)</label>
+          <input id="joinPassword" maxlength="16" type="password" placeholder="Senha" />
+          <button type="button" class="ghost" id="joinRoomBtn">Entrar</button>
+          <div class="status" id="joinStatus"></div>
+        </div>
+        <div id="waiting" hidden>
+          <h2>Preparar pecas</h2>
+          <div class="meta" id="waitingPlayers"></div>
+          <div id="classBox" class="stack"></div>
+          <button type="button" class="primary" id="startMatchBtn">Iniciar partida</button>
+        </div>
+      </section>
+      <aside class="panel">
+        <h2>Salas</h2>
+        <button type="button" class="ghost" id="refreshRoomsBtn">Atualizar</button>
+        <div id="roomsList" style="margin-top: 12px;"></div>
+      </aside>
+    </div>
+  </div>
+  <script src="/js/api.js"></script>
+  <script src="/js/lobby.js"></script>
+</body>
+</html>
