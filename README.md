@@ -19,7 +19,7 @@ Não há deploy público. A partida roda na sua máquina ou na rede interna:
 - HTTP + SSE para o lobby web (`web/`)
 - HTML, CSS e JavaScript no `frontend/`
 - TCP com mensagens JSON para o modo online (`online/`)
-- `unittest` e Ruff no CI
+- `unittest`, Node (fila da arena 3D) e Ruff no CI
 
 ## ✨ Funcionalidades
 
@@ -52,7 +52,7 @@ No co-op o chefe escala HP e dano com o tamanho do grupo, mira o mais ferido na 
 - Em acerto, o dano usa `d10 + bônus`. Crítico (20) dobra o dano.
 - Armadura reduz dano e perde durabilidade; cura não ressuscita eliminado.
 - Acerto concede 25 de XP. Há 1/3 de chance de ganhar moedas (como no terminal).
-- Magias gastam mana. Bola de Fogo causa 18, Rajada 12 e Cura Leve recupera 15, mais o bônus de dano.
+- Magias gastam mana. Bola de Fogo causa 18, Golpe de Energia 14, Rajada 12 e Cura Leve recupera 15, mais o bônus de dano.
 
 ## 🔒 Rede
 
@@ -104,3 +104,5 @@ python -m unittest discover -s tests -q
 pip install ruff
 ruff check .
 ```
+
+O teste da fila 3D usa Node, se estiver no PATH. No GitHub Actions o Node 20 já entra no CI.

@@ -31,7 +31,7 @@ def resolver_jogada(
         resultado = resolver_ataque(jogador, alvo)
         eventos = list(resultado.get("eventos") or [resultado])
         if resultado["acertou"]:
-            extra = Partida.ganhar_moeda(jogador, rodada, silencioso=True)
+            extra = Partida.ganhar_moeda(jogador, rodada)
             if extra:
                 eventos.append(extra)
             eventos.extend(jogador.ganhar_experiencia(25) or [])
@@ -43,7 +43,7 @@ def resolver_jogada(
             "critico": resultado.get("critico", False),
             "target": alvo.nome,
             "shop": shop,
-            "extra": not getattr(jogador, "gasta_turno", True),
+            "extra": False,
         }
 
     if acao == "shop":
@@ -101,7 +101,7 @@ def resolver_jogada(
             "type": "magic",
             "magic": magia_obj.nome,
             "target": alvo.nome,
-            "extra": not getattr(jogador, "gasta_turno", True),
+            "extra": False,
         }
 
     return {"ok": False, "erro": "Ação indisponível.", "eventos": []}

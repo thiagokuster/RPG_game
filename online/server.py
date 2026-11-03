@@ -499,17 +499,11 @@ class LobbyServer:
             result["winner"] = match.vivos()[0].nome if match.vivos() else None
             result["next_turn"] = None
         else:
-            jogador = next((j for j in match.jogadores if j.nome == payload.get("player")), None)
-            if result.get("type") == "magic" and jogador is not None and not getattr(jogador, "gasta_turno", True):
-                jogador.gasta_turno = True
-                result["extra"] = True
-                result["next_turn"] = jogador.nome
-            else:
-                self._advance_turn(room_name)
-                result["next_turn"] = self.connections.get(
-                    self.room_state.get(room_name, {}).get("current_turn"),
-                    {},
-                ).get("player")
+            self._advance_turn(room_name)
+            result["next_turn"] = self.connections.get(
+                self.room_state.get(room_name, {}).get("current_turn"),
+                {},
+            ).get("player")
         result["current_turn"] = result.get("next_turn")
         result["state"] = self._room_snapshot(room_name)
         self._save_room_state(room_name)

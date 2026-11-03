@@ -48,7 +48,7 @@ class Partida:
         return None
 
     @classmethod
-    def registrar_jogadores(cls, qj, hp=100, classes=None):
+    def registrar_jogadores(cls, qj, classes=None):
         nomes = [f"Jogador {i + 1}" for i in range(qj)]
         passivas = {nomes[i]: classes[i] for i in range(min(len(nomes), len(classes or [])))} or None
         return Jogador.criar_elenco(nomes, passivas)
@@ -129,7 +129,7 @@ class Partida:
         }
 
     @classmethod
-    def ganhar_moeda(cls, jog: Jogador, rodada, silencioso=False):
+    def ganhar_moeda(cls, jog: Jogador, rodada):
         moedamax = int(4 + rodada / 4)
         moeda = randint(1, moedamax)
         chance = randint(1, 3)

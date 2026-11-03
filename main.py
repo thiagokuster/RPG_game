@@ -114,10 +114,6 @@ def jogar():
             resultado = escolher_e_usar_magia(partida, jog)
             if resultado is None:
                 continue
-            if not getattr(jog, "gasta_turno", True):
-                jog.gasta_turno = True
-                print(f"{jog.nome} ainda pode agir neste turno.")
-                continue
             jog = avancar_turno(partida, loja, jog, estado, atualizar_loja=True)
 
         else:

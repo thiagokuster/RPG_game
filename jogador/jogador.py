@@ -53,8 +53,6 @@ class Jogador:
         self.bonus_acerto = 0
         self.mana_por_rodada = 0
         self.kit = None
-        self.gasta_turno = True
-        self.extra_disponivel = True
         self.arma: Equipamento = None
         self.anel = None
         self.armadura = None
@@ -116,8 +114,6 @@ class Jogador:
         self.bonus_acerto = 0
         self.mana_por_rodada = 0
         self.kit = config.get("kit")
-        self.gasta_turno = True
-        self.extra_disponivel = True
 
     def aplicar_passiva(self, passiva=None):
         self.aplicar_base()
@@ -157,8 +153,7 @@ class Jogador:
         self.equipar(item)
 
     def iniciar_turno(self):
-        self.extra_disponivel = True
-        self.gasta_turno = True
+        pass
 
     def inicio_rodada(self):
         if self.hp <= 0 or self.mana_por_rodada <= 0:
@@ -223,7 +218,6 @@ class Jogador:
             return False
 
         self.mana -= magia.custo
-        self.gasta_turno = True
         if magia.tipo == "dano":
             if getattr(alvo, "hp", 0) <= 0:
                 self.mana += magia.custo

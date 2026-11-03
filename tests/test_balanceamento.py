@@ -1,8 +1,6 @@
 import random
 import unittest
 from collections import Counter
-from contextlib import ExitStack
-from unittest.mock import patch
 
 from jogador import Jogador
 from loja import Loja
@@ -11,14 +9,6 @@ from combate import resolver_ataque
 
 
 NOMES = ["Ana", "Bruno", "Carla", "Diego", "Eva"]
-
-
-def silenciar_saida():
-    return ExitStack()
-
-
-def _abrir_silencio(pilha):
-    pilha.enter_context(patch("builtins.print", lambda *_a, **_k: None))
 
 
 def _inimigos(jogador, partida):
@@ -119,12 +109,6 @@ def simular_partida(seed):
         acao = _agir(atual, partida, loja)
         usos[acao] += 1
         partida.verificar_mortos()
-        if acao in {"cura", "magia"} and not getattr(atual, "gasta_turno", True) and atual.hp > 0:
-            atual.gasta_turno = True
-            extra = _agir(atual, partida, loja)
-            usos[extra] += 1
-            usos["extra"] += 1
-            partida.verificar_mortos()
         if acao == "ataque" and atual.hp > 0:
             Partida.ganhar_moeda(atual, rodada)
             atual.ganhar_experiencia(25)
@@ -143,10 +127,7 @@ def simular_partida(seed):
 class TestBalanceamento(unittest.TestCase):
     def test_simula_partidas_com_sementes_registradas(self):
         seeds = list(range(40))
-        resultados = []
-        with silenciar_saida() as pilha:
-            _abrir_silencio(pilha)
-            resultados = [simular_partida(seed) for seed in seeds]
+        resultados = [simular_partida(seed) for seed in seeds]
 
         self.assertEqual(len(resultados), 40)
         self.assertTrue(all(item["turnos"] > 0 for item in resultados))
@@ -156,22 +137,6 @@ class TestBalanceamento(unittest.TestCase):
         for item in resultados:
             usos.update(item["usos"])
         duracao_media = sum(item["turnos"] for item in resultados) / len(resultados)
-
-        print("\n=== BALANCEAMENTO (jogo real) ===")
-        print(f"Sementes: {seeds[0]}-{seeds[-1]}")
-        print(f"Duracao media: {duracao_media:.1f} turnos")
-        print(f"Vitorias por jogador: {dict(vitorias)}")
-        print(
-            "Acoes: "
-            f"ataque={usos['ataque']} magia={usos['magia']} cura={usos['cura']} "
-            f"loja={usos['loja_arma'] + usos['loja_armadura'] + usos['loja_anel']}"
-        )
-        print(
-            "Eventos: "
-            f"total={usos['eventos']} monstro={usos['evento_monstro']} "
-            f"tesouro={usos['evento_tesouro']} aposta={usos['evento_aposta']} "
-            f"risco={usos['evento_risco']}"
-        )
 
         self.assertGreater(usos["magia"] + usos["cura"], 0)
         self.assertGreater(usos["eventos"], 0)

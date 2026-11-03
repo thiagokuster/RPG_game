@@ -372,15 +372,8 @@ class Lobby:
             result["winner"] = room["winner"]
             result["next_turn"] = None
         else:
-            atacante = next((j for j in match.jogadores if j.nome == result.get("player")), None)
-            if atacante is not None and not getattr(atacante, "gasta_turno", True):
-                atacante.gasta_turno = True
-                result["next_turn"] = atacante.nome
-                result["extra"] = True
-                room["current_turn"] = atacante.nome
-            else:
-                result["next_turn"] = self._next_turn(room, match)
-                self._resolver_turno_npc(room, match)
+            result["next_turn"] = self._next_turn(room, match)
+            self._resolver_turno_npc(room, match)
             result["status"] = room["status"]
         result["current_turn"] = room.get("current_turn")
         result["room"] = room_name

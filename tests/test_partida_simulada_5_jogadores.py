@@ -176,10 +176,7 @@ class TestPartidaSimulada5Jogadores(unittest.TestCase):
         self.assertTrue(partida.fim_partida())
         self.assertEqual(partida.vivos()[0].nome, "Ana")
         self.registrar("Ana venceu a partida de 5 jogadores.")
-
-        print("\n=== LOG DA PARTIDA SIMULADA ===")
-        for linha in self.log:
-            print(f"- {linha}")
+        self.assertTrue(self.log)
 
     def test_lobby_web_com_cinco_jogadores(self):
         lobby = Lobby()

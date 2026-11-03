@@ -107,10 +107,7 @@ class TestPartidaSimulada6Jogadores(unittest.TestCase):
         self.assertEqual(partida.vivos()[0].nome, "Ana")
         self.assertEqual(len(partida.mortos), 5)
         self.registrar("Ana venceu a partida de 6 jogadores.")
-
-        print("\n=== LOG DA PARTIDA DE 6 JOGADORES ===")
-        for linha in self.log:
-            print(f"- {linha}")
+        self.assertTrue(self.log)
 
     def test_lobby_cria_uma_sala_e_joga_com_seis(self):
         lobby = Lobby()
@@ -151,8 +148,6 @@ class TestPartidaSimulada6Jogadores(unittest.TestCase):
         self.assertEqual(resultado["next_turn"], "Carla")
 
         resultado = lobby.perform_action(codigo, "Carla", "attack", "Diego", token=lobby.token_of(codigo, "Carla"))
-        if resultado.get("extra"):
-            resultado = lobby.perform_action(codigo, "Carla", "attack", "Diego", token=lobby.token_of(codigo, "Carla"))
         self.assertEqual(resultado["next_turn"], "Diego")
 
         resultado = lobby.perform_action(codigo, "Diego", "use_magic", target="Ana", magic="Cura Leve", token=lobby.token_of(codigo, "Diego"))
