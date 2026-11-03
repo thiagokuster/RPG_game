@@ -1,3 +1,5 @@
+import shutil
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -24,15 +26,30 @@ class TestArena3D(unittest.TestCase):
         self.assertIn("window.addEventListener(\"resize\"", fonte)
         self.assertIn("if (visible)", fonte)
         self.assertIn("makeLabelTexture", fonte)
-        self.assertIn("if (!primed)", fonte)
         self.assertIn("body.scale.set", fonte)
         self.assertIn("labelKey", fonte)
         self.assertIn("playDeath", fonte)
         self.assertIn("showWaveBanner", fonte)
+        self.assertIn("shouldResetMatch", fonte)
+        self.assertIn("animGen", fonte)
+        self.assertIn("applyIdleEmissive", fonte)
         self.assertNotIn("group.scale.set", fonte)
         self.assertNotIn("figures.clear()", fonte)
         html = (FRONTEND / "jogo.html").read_text(encoding="utf-8")
         self.assertIn("ondaBanner", html)
+        match = (FRONTEND / "js" / "arena3d_match.js").read_text(encoding="utf-8")
+        self.assertIn("!player.npc", match)
+        self.assertIn("if (!primed)", match)
+        self.assertNotIn("room.status", match)
+
+    def test_fingerprint_e_fila_no_node(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("node indisponível")
+        script = ROOT / "tests" / "test_arena3d_match.mjs"
+        result = subprocess.run([node, str(script)], cwd=ROOT, capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("ok", result.stdout)
 
 
 if __name__ == "__main__":

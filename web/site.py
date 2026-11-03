@@ -1,4 +1,5 @@
 import json
+import logging
 import mimetypes
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -180,7 +181,11 @@ class LobbyRequestHandler(BaseHTTPRequestHandler):
                 if not result.get("error") and result.get("type") != "error":
                     self._publish(result.get("room") or payload.get("room"))
                 return
-        except (ValueError, KeyError, TypeError, AttributeError) as exc:
+        except (ValueError, KeyError) as exc:
+            self._send_json({"error": str(exc)}, 400)
+            return
+        except (TypeError, AttributeError) as exc:
+            logging.exception("Erro interno ao tratar %s", parsed.path)
             self._send_json({"error": str(exc) or "Requisição inválida."}, 400)
             return
 

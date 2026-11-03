@@ -1,8 +1,9 @@
 import * as THREE from "three";
+import { QUEUE_TYPES, collectFreshEvents, shouldResetMatch } from "./arena3d_match.js";
 
 const Arena3D = (() => {
   const COLORS = [0xc24b4b, 0x7b5ea7, 0x769656, 0xd4a017, 0x6a9fbf, 0xe8c547];
-  const QUEUE_TYPES = new Set(["ataque", "magia", "morte", "cura", "onda"]);
+  const TYPES = new Set(QUEUE_TYPES);
 
   let renderer;
   let scene;
@@ -20,6 +21,8 @@ const Arena3D = (() => {
   let primed = false;
   let matchKey = "";
   let raf = 0;
+  let animGen = 0;
+  let animRaf = 0;
   const queue = [];
   const radius = 9;
 
@@ -29,22 +32,23 @@ const Arena3D = (() => {
     return COLORS[index % COLORS.length];
   }
 
-  function fingerprint(room) {
-    const names = (room.players || []).map((player) => player.name).join(",");
-    return `${room.code || ""}|${room.status || ""}|${names}`;
+  function cancelAnim() {
+    animGen += 1;
+    if (animRaf) {
+      cancelAnimationFrame(animRaf);
+      animRaf = 0;
+    }
+    animating = false;
   }
 
   function resetMatch(room) {
-    const key = fingerprint(room);
-    const ids = (room.eventos || []).map((ev) => ev.id).filter((id) => id != null);
-    const maxId = ids.length ? Math.max(...ids) : 0;
-    if (key !== matchKey || (maxId && maxId < lastSeenId)) {
-      matchKey = key;
-      primed = false;
-      lastSeenId = 0;
-      queue.length = 0;
-      animating = false;
-    }
+    const decision = shouldResetMatch(room, matchKey, lastSeenId);
+    if (!decision.reset) return;
+    matchKey = decision.key;
+    primed = false;
+    lastSeenId = 0;
+    queue.length = 0;
+    cancelAnim();
   }
 
   function disposeObject(object) {
@@ -115,10 +119,8 @@ const Arena3D = (() => {
     if (!animating) body.scale.set(1, dead ? 0.45 : 1, 1);
     body.material.color.setHex(colorFor(player, index));
     const active = player.name === currentTurn && !dead;
-    if (!animating) {
-      body.material.emissive.setHex(active ? 0xe8c547 : 0x000000);
-      body.material.emissiveIntensity = active ? 0.35 : 0;
-    }
+    group.userData.active = active;
+    if (!animating && !group.userData.flashing) applyIdleEmissive(group);
     const sprite = group.userData.sprite;
     const labelKey = `${player.name}|${player.hp}|${player.max_hp}|${active}|${dead}`;
     if (group.userData.labelKey === labelKey) return;
@@ -129,16 +131,26 @@ const Arena3D = (() => {
     if (old) old.dispose();
   }
 
+  function applyIdleEmissive(group) {
+    if (!group) return;
+    const body = group.userData.body;
+    const active = Boolean(group.userData.active);
+    body.material.emissive.setHex(active ? 0xe8c547 : 0x000000);
+    body.material.emissiveIntensity = active ? 0.35 : 0;
+  }
+
   function flash(group, hex, ms = 280) {
     if (!group) return;
     const body = group.userData.body;
-    const prev = body.material.emissive.getHex();
-    const prevI = body.material.emissiveIntensity;
+    const token = (group.userData.flashToken || 0) + 1;
+    group.userData.flashToken = token;
+    group.userData.flashing = true;
     body.material.emissive.setHex(hex);
     body.material.emissiveIntensity = 0.9;
     setTimeout(() => {
-      body.material.emissive.setHex(prev);
-      body.material.emissiveIntensity = prevI;
+      if (group.userData.flashToken !== token) return;
+      group.userData.flashing = false;
+      applyIdleEmissive(group);
     }, ms);
   }
 
@@ -238,25 +250,28 @@ const Arena3D = (() => {
   }
 
   function playDeath(who) {
+    const gen = animGen;
     animating = true;
     const body = who.userData.body;
     const start = performance.now();
     flash(who, 0x3a3632, 500);
     function tick(now) {
+      if (gen !== animGen) return;
       const t = Math.min(1, (now - start) / 480);
       body.scale.set(1, 1 - 0.55 * t, 1);
       if (t < 1) {
-        requestAnimationFrame(tick);
+        animRaf = requestAnimationFrame(tick);
         return;
       }
       body.scale.set(1, 0.45, 1);
       animating = false;
       playNext();
     }
-    requestAnimationFrame(tick);
+    animRaf = requestAnimationFrame(tick);
   }
 
   function playPunch(from, to, ev) {
+    const gen = animGen;
     animating = true;
     const start = performance.now();
     const home = from.userData.home.clone();
@@ -264,12 +279,13 @@ const Arena3D = (() => {
     if (ev.tipo === "magia") flash(from, 0x6a9fbf, 420);
     if (ev.critico) flash(to, 0xffffff, 360);
     function tick(now) {
+      if (gen !== animGen) return;
       const t = Math.min(1, (now - start) / 420);
       const punch = t < 0.5 ? t * 2 : (1 - t) * 2;
       from.position.lerpVectors(home, toHome, punch * 0.45);
       to.position.y = ev.acertou || ev.dano || ev.cura ? Math.sin(t * Math.PI) * 0.25 : 0;
       if (t < 1) {
-        requestAnimationFrame(tick);
+        animRaf = requestAnimationFrame(tick);
         return;
       }
       from.position.copy(home);
@@ -277,7 +293,7 @@ const Arena3D = (() => {
       animating = false;
       playNext();
     }
-    requestAnimationFrame(tick);
+    animRaf = requestAnimationFrame(tick);
   }
 
   function playNext() {
@@ -315,21 +331,11 @@ const Arena3D = (() => {
   }
 
   function playEvents(eventos) {
-    let maxId = lastSeenId;
-    const fresh = [];
-    for (const ev of eventos || []) {
-      const id = ev.id;
-      if (id != null) maxId = Math.max(maxId, id);
-      if (id != null && id <= lastSeenId) continue;
-      if (QUEUE_TYPES.has(ev.tipo) || ev.critico) fresh.push(ev);
-    }
-    if (!primed) {
-      lastSeenId = maxId;
-      primed = true;
-      return;
-    }
-    lastSeenId = maxId;
-    for (const ev of fresh) queue.push(ev);
+    const next = collectFreshEvents(eventos, lastSeenId, primed, TYPES);
+    lastSeenId = next.lastSeenId;
+    primed = next.primed;
+    if (!next.fresh.length) return;
+    for (const ev of next.fresh) queue.push(ev);
     playNext();
   }
 

@@ -114,9 +114,9 @@ class Monstro:
             eventos.extend(ultimo.get("eventos") or [ultimo])
         if ultimo is None:
             resultado = evento("ataque", de=self.nome, acertou=False, dano=0)
-            resultado["eventos"] = eventos or [resultado]
+            resultado["eventos"] = eventos or [{chave: valor for chave, valor in resultado.items() if chave != "eventos"}]
             return resultado
-        ultimo = dict(ultimo)
+        ultimo = {chave: valor for chave, valor in ultimo.items() if chave != "eventos"}
         ultimo["eventos"] = eventos
         return ultimo
 
@@ -139,12 +139,13 @@ class Monstro:
                 dano = bruto
             morto = getattr(alvo, "hp", 0) <= 0
             resultado = evento("ataque", de=self.nome, para=nome(alvo), acertou=True, dano=dano, critico=False)
-            resultado["eventos"] = [resultado]
+            filhos = [{chave: valor for chave, valor in resultado.items() if chave != "eventos"}]
             if morto:
-                resultado["eventos"].append(evento("morte", de=nome(alvo)))
+                filhos.append(evento("morte", de=nome(alvo)))
+            resultado["eventos"] = filhos
             return resultado
         resultado = evento("ataque", de=self.nome, para=nome(alvo), acertou=False, dano=0, critico=False)
-        resultado["eventos"] = [resultado]
+        resultado["eventos"] = [{chave: valor for chave, valor in resultado.items() if chave != "eventos"}]
         return resultado
 
     def __repr__(self):

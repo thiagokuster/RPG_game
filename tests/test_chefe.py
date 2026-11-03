@@ -18,6 +18,16 @@ class TestChefe(unittest.TestCase):
         with patch("monstro.monstro.randint", return_value=10), patch("monstro.monstro.choice", return_value=bruno):
             self.assertEqual(Monstro.escolher_alvo([ana, bruno]).nome, "Bruno")
 
+    def test_ataque_do_chefe_serializa_sem_ciclo(self):
+        import json
+
+        chefe = Monstro.gerar_chefe(1)
+        ana = Jogador.criar("Ana", passiva="Bruto")
+        with patch("monstro.monstro.randint", return_value=20):
+            resultado = chefe.atacar(ana)
+        json.dumps(resultado)
+        self.assertIsNot(resultado["eventos"][0], resultado)
+
     def test_pisada_atinge_os_dois_mais_feridos(self):
         chefe = Monstro.gerar_chefe(1)
         ana = Jogador.criar("Ana", passiva="Bruto")
