@@ -16,6 +16,7 @@ class Partida:
         self.onda = 0
         self.seq = 0
         self.eventos = []
+        self.tamanho_grupo = len([jogador for jogador in jogadores if hasattr(jogador, "inventario")])
         for jogador in jogadores:
             if getattr(jogador, "tipo", "") == "chefe":
                 self.onda = max(self.onda, getattr(jogador, "onda", 1))
@@ -65,21 +66,44 @@ class Partida:
         self.registrar_evento(saida)
         return saida
 
+    def _monstros_vivos(self):
+        return [jogador for jogador in self.vivos() if jogador not in self.vivos_jogadores()]
+
+    def curar_entre_ondas(self):
+        eventos = []
+        for jogador in self.vivos_jogadores():
+            falta = max(0, jogador.max_hp - jogador.hp)
+            if falta <= 0:
+                continue
+            cura = max(1, int(falta * 0.4))
+            jogador.hp = min(jogador.max_hp, jogador.hp + cura)
+            eventos.append(evento("cura", de=jogador.nome, para=jogador.nome, cura=cura))
+        return eventos
+
     def tentar_proxima_onda(self):
         if self.modo != "coop":
             return []
         if not self.vivos_jogadores():
             return []
-        if any(getattr(jogador, "tipo", "") == "chefe" and jogador.hp > 0 for jogador in self.jogadores):
+        if self._monstros_vivos():
             return []
         if self.onda >= self.ONDAS_MAX:
             return []
         from monstro import Monstro
 
+        eventos = self.curar_entre_ondas()
         self.onda += 1
-        chefe = Monstro.gerar_chefe(self.onda)
+        n = self.tamanho_grupo or len(self.vivos_jogadores())
+        chefe = Monstro.gerar_chefe(self.onda, jogadores=n)
         self.jogadores.append(chefe)
-        return [evento("onda", de=chefe.nome, onda=self.onda)]
+        eventos.append(evento("onda", de=chefe.nome, onda=self.onda))
+        extras = (1 if n >= 4 else 0) + (1 if n >= 6 else 0)
+        for indice in range(extras):
+            guarda = Monstro.gerar_monstro(self.onda)
+            guarda.nome = f"Guarda {indice + 1} da onda {self.onda}"
+            self.jogadores.append(guarda)
+            eventos.append(evento("onda", de=guarda.nome, onda=self.onda))
+        return eventos
 
     def registrar_evento(self, ev):
         if not ev:
@@ -193,8 +217,6 @@ class Partida:
         return evento("fim", vencedor=None, acabou=False)
 
     def fim_partida(self):
-        if self.modo == "coop":
-            self.tentar_proxima_onda()
         resultado = self.resultado_fim()
         if resultado.get("acabou"):
             self.registrar_evento(resultado)

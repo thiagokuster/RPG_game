@@ -140,8 +140,29 @@ button:disabled {
 .code { color: var(--gold); letter-spacing: 0.12em; font-weight: 700; }
 
 .table {
+  position: relative;
   display: grid;
   gap: 16px;
+}
+
+#ondaBanner {
+  position: absolute;
+  left: 50%;
+  top: 64px;
+  transform: translateX(-50%);
+  background: rgba(212, 160, 23, 0.95);
+  color: #161512;
+  font-size: 1.25rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 10px 22px;
+  border-radius: 4px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+#ondaBanner[hidden] {
+  display: none;
 }
 
 .seats {
@@ -205,6 +226,10 @@ button:disabled {
   border-radius: 4px;
   background: #111;
   display: block;
+}
+
+#arena3d[hidden] {
+  display: none;
 }
 
 #modoCoop {

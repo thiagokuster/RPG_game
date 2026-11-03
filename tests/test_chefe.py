@@ -84,6 +84,55 @@ class TestChefe(unittest.TestCase):
             alvo = chefe.escolher_alvo([ana, bruno])
         self.assertEqual(alvo.nome, "Ana")
 
+    def test_chefe_escala_com_o_grupo(self):
+        dois = Monstro.gerar_chefe(1, jogadores=2)
+        seis = Monstro.gerar_chefe(1, jogadores=6)
+        self.assertEqual(dois.hp, int((40 + 18) * (0.5 + 1.1)))
+        self.assertGreater(seis.hp, dois.hp * 1.8)
+        self.assertGreater(seis.dano, dois.dano)
+        self.assertGreaterEqual(seis._golpes_por_turno(), 2)
+
+    def test_cura_parcial_entre_ondas(self):
+        ana = Jogador.criar("Ana", passiva="Bruto")
+        bruno = Jogador.criar("Bruno", passiva="Arcano")
+        chefe = Monstro.gerar_chefe(1)
+        ana.hp = 10
+        partida = Partida([ana, bruno, chefe], modo="coop")
+        chefe.hp = 0
+        partida.verificar_mortos()
+        partida.tentar_proxima_onda()
+        self.assertGreater(ana.hp, 10)
+        self.assertLess(ana.hp, ana.max_hp)
+
+    def test_grupo_grande_ganha_guarda(self):
+        nomes = [Jogador.criar(nome, passiva="Bruto") for nome in ("Ana", "Bruno", "Carla", "Davi")]
+        partida = Partida(nomes, modo="coop")
+        partida.tentar_proxima_onda()
+        npcs = [jogador for jogador in partida.jogadores if not hasattr(jogador, "inventario")]
+        self.assertGreaterEqual(len(npcs), 2)
+
+    def test_fim_partida_nao_spawna_onda(self):
+        ana = Jogador.criar("Ana", passiva="Bruto")
+        bruno = Jogador.criar("Bruno", passiva="Arcano")
+        chefe = Monstro.gerar_chefe(1)
+        partida = Partida([ana, bruno, chefe], modo="coop")
+        chefe.hp = 0
+        partida.verificar_mortos()
+        self.assertTrue(partida.fim_partida())
+        self.assertEqual(partida.onda, 1)
+
+    def test_classes_malformadas_nao_derrubam_start(self):
+        lobby = Lobby()
+        sala = lobby.create_room("Ana")
+        lobby.join_room("Bruno", sala["code"])
+        started = lobby.start_match(
+            sala["code"],
+            classes="x",
+            token=lobby.token_of(sala["code"], "Ana"),
+        )
+        self.assertEqual(started["status"], "started")
+        self.assertEqual(len(started["players"]), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -22,6 +22,7 @@ const els = {
 
 let selectedTarget = "";
 let source = null;
+let lastRoom = null;
 
 function percent(current, max) {
   if (!max) return 0;
@@ -35,6 +36,7 @@ function setStatus(message, ok = true) {
 
 function render(room) {
   if (!room) return;
+  lastRoom = room;
   const players = room.players || [];
   const me = players.find((player) => player.name === playerName);
   const myTurn = room.current_turn === playerName && room.status === "started";
@@ -131,7 +133,8 @@ function render(room) {
   const lines = (room.log || []).map((entry) => entry.text || entry).join("\n");
   els.log.textContent = lines || "Aguardando lances...";
   els.log.scrollTop = els.log.scrollHeight;
-  if (window.Arena3D && !document.getElementById("arena3d").hidden) {
+  const canvas = document.getElementById("arena3d");
+  if (window.Arena3D && canvas && !canvas.hidden) {
     window.Arena3D.render(room);
   }
 }
@@ -174,6 +177,7 @@ if (toggle3d && canvas3d) {
       canvas3d.hidden = !on;
     }
     toggle3d.textContent = on ? "Tabuleiro 2D" : "Arena 3D";
+    if (on && lastRoom && window.Arena3D) window.Arena3D.render(lastRoom);
   });
 }
 

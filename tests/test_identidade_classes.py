@@ -45,6 +45,12 @@ class TestPassivas(unittest.TestCase):
         critico = resolver_ataque(preciso, bruno)
         self.assertTrue(critico["critico"])
 
+    def test_elenco_nao_forca_bruto_em_passiva_desconhecida(self):
+        elenco = Jogador.criar_elenco(["Ana", "Bruno", "Carla"], {"Bruno": "nao_existe"})
+        self.assertEqual([jogador.passiva for jogador in elenco], ["Bruto", "Arcano", "Preciso"])
+        elenco = Jogador.criar_elenco(["Ana", "Bruno"], [1, 2])
+        self.assertEqual([jogador.passiva for jogador in elenco], ["Bruto", "Arcano"])
+
     def test_nivel_tres_libera_as_outras_magias(self):
         ana = Jogador.criar("Ana", passiva="Bruto")
         ana.experiencia = 99

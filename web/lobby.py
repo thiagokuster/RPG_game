@@ -221,29 +221,31 @@ class Lobby:
             if len(player_names) < 2:
                 raise ValueError("É necessário pelo menos dois jogadores para iniciar a partida.")
 
-            escolhas = classes or {}
+            escolhas = classes if isinstance(classes, dict) else {}
             jogadores = Jogador.criar_elenco(player_names, escolhas)
             modo_sala = "coop" if str(modo).lower() == "coop" else "pvp"
-            if modo_sala == "coop":
-                from monstro import Monstro
-
-                jogadores.append(Monstro.gerar_chefe(1))
             partida = Partida(jogadores, modo=modo_sala)
+            ondas = []
+            if modo_sala == "coop":
+                ondas = self._emitir(partida, partida.tentar_proxima_onda())
 
             room["match"] = partida
             room["modo"] = modo_sala
             room["shop"] = Equipamento.gerar_estoque(1, 3)
             room["status"] = "started"
-            room["turn_order"] = [jogador.nome for jogador in jogadores]
+            room["turn_order"] = [jogador.nome for jogador in partida.jogadores]
             room["current_turn"] = player_names[0]
             room["rodada"] = 1
             room["winner"] = None
-            room["eventos"] = []
+            room["eventos"] = list(ondas)
             room["players"] = [
                 {"name": jogador.nome, "classe": jogador.classe, "hp": jogador.hp, "max_hp": jogador.max_hp, "obj": jogador}
                 for jogador in partida.jogadores
             ]
             self._append_log(room, f"Partida iniciada. Vez de {room['current_turn']}.")
+            for ev in ondas:
+                if ev.get("texto"):
+                    self._append_log(room, ev["texto"])
             partida.jogadores[0].iniciar_turno()
             return self._room_snapshot(room_name)
 
@@ -364,7 +366,7 @@ class Lobby:
         self._sync_players(room, match)
         if match.fim_partida():
             room["status"] = "finished"
-            room["winner"] = match.vivos()[0].nome if match.vivos() else "nenhum"
+            room["winner"] = match.resultado_fim().get("vencedor") or "nenhum"
             room["current_turn"] = None
             result["status"] = "finished"
             result["winner"] = room["winner"]
@@ -427,7 +429,7 @@ class Lobby:
             if "shop" in jogada:
                 room["shop"] = jogada["shop"]
             eventos = self._emitir(match, jogada.get("eventos"))
-            room["eventos"] = eventos
+            room["eventos"] = (list(room.get("eventos") or []) + eventos)[-40:]
             payload = {
                 "player": player,
                 "target": jogada.get("target") or target,
@@ -437,7 +439,7 @@ class Lobby:
                 "type": jogada.get("type"),
                 "magic": jogada.get("magic"),
                 "item": jogada.get("item"),
-                "eventos": eventos,
+                "eventos": list(room["eventos"]),
                 "items": [self._serialize_item(item) for item in room.get("shop", [])],
                 "inventory": [item.nome for item in atacante.inventario],
             }

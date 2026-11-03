@@ -62,10 +62,20 @@ class Jogador:
         self.aplicar_base()
 
     @classmethod
-    def normalizar_passiva(cls, valor):
+    def passiva_conhecida(cls, valor):
         if not valor:
-            return "Bruto"
-        return cls._ALIASES_PASSIVA.get(str(valor).strip().lower(), "Bruto")
+            return None
+        chave = str(valor).strip().lower()
+        if chave in cls._ALIASES_PASSIVA:
+            return cls._ALIASES_PASSIVA[chave]
+        for item in cls.PASSIVAS:
+            if item.lower() == chave:
+                return item
+        return None
+
+    @classmethod
+    def normalizar_passiva(cls, valor, padrao=None):
+        return cls.passiva_conhecida(valor) or padrao or "Bruto"
 
     @classmethod
     def criar(cls, nome, nivel=1, passiva=None):
@@ -76,11 +86,14 @@ class Jogador:
 
     @classmethod
     def criar_elenco(cls, nomes, passivas=None):
-        passivas = passivas or {}
-        return [
-            cls.criar(nome, passiva=passivas.get(nome) or cls.PASSIVAS[indice % 3])
-            for indice, nome in enumerate(nomes)
-        ]
+        if not isinstance(passivas, dict):
+            passivas = {}
+        elenco = []
+        for indice, personagem in enumerate(nomes):
+            padrao = cls.PASSIVAS[indice % 3]
+            escolhida = cls.passiva_conhecida(passivas.get(personagem))
+            elenco.append(cls.criar(personagem, passiva=escolhida or padrao))
+        return elenco
 
     @classmethod
     def criar_por_classe(cls, nome, classe=None, nivel=1):

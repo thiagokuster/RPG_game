@@ -24,7 +24,15 @@ class TestArena3D(unittest.TestCase):
         self.assertIn("window.addEventListener(\"resize\"", fonte)
         self.assertIn("if (visible)", fonte)
         self.assertIn("makeLabelTexture", fonte)
+        self.assertIn("if (!primed)", fonte)
+        self.assertIn("body.scale.set", fonte)
+        self.assertIn("labelKey", fonte)
+        self.assertIn("playDeath", fonte)
+        self.assertIn("showWaveBanner", fonte)
+        self.assertNotIn("group.scale.set", fonte)
         self.assertNotIn("figures.clear()", fonte)
+        html = (FRONTEND / "jogo.html").read_text(encoding="utf-8")
+        self.assertIn("ondaBanner", html)
 
 
 if __name__ == "__main__":

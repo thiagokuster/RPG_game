@@ -205,6 +205,8 @@ class LobbyServer:
             return
 
         escolhas = payload.get("classes") or payload.get("passivas") or {}
+        if not isinstance(escolhas, dict):
+            escolhas = {}
         jogadores = Jogador.criar_elenco(player_names, escolhas)
         partida = Partida(jogadores)
 
@@ -402,6 +404,7 @@ class LobbyServer:
         }
 
         match.verificar_mortos()
+        match.tentar_proxima_onda()
         if match.fim_partida():
             state["status"] = "finished"
             state["current_turn"] = None
@@ -488,6 +491,7 @@ class LobbyServer:
         room_name = payload["room"]
         match = state["match"]
         match.verificar_mortos()
+        match.tentar_proxima_onda()
         if match.fim_partida():
             state["status"] = "finished"
             state["current_turn"] = None

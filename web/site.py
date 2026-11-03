@@ -180,8 +180,8 @@ class LobbyRequestHandler(BaseHTTPRequestHandler):
                 if not result.get("error") and result.get("type") != "error":
                     self._publish(result.get("room") or payload.get("room"))
                 return
-        except (ValueError, KeyError) as exc:
-            self._send_json({"error": str(exc)}, 400)
+        except (ValueError, KeyError, TypeError, AttributeError) as exc:
+            self._send_json({"error": str(exc) or "Requisição inválida."}, 400)
             return
 
         self._send_json({"error": "Endpoint não encontrado."}, 404)

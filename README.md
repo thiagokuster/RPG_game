@@ -44,7 +44,7 @@ A ficha base é a mesma. No lobby cada um escolhe **uma passiva** (não é class
 | Arcano | 90 | 6 | +1 mana/rodada | Cura Leve, Bola de Fogo |
 | Preciso | 100 | 4 | +1 acerto, crítico 19 | Cura Leve, Rajada Congelante |
 
-No co-op o chefe mira o mais ferido na maior parte das vezes, usa Pisada a cada três turnos e avança até 3 ondas.
+No co-op o chefe escala HP e dano com o tamanho do grupo, mira o mais ferido na maior parte das vezes, usa Pisada a cada três turnos e avança até 3 ondas. Grupos grandes enfrentam um guarda extra; entre ondas os jogadores recuperam parte do HP perdido.
 
 ## 🎲 Combate
 

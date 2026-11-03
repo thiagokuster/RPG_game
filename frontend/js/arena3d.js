@@ -2,11 +2,13 @@ import * as THREE from "three";
 
 const Arena3D = (() => {
   const COLORS = [0xc24b4b, 0x7b5ea7, 0x769656, 0xd4a017, 0x6a9fbf, 0xe8c547];
+  const QUEUE_TYPES = new Set(["ataque", "magia", "morte", "cura", "onda"]);
 
   let renderer;
   let scene;
   let camera;
   let canvasRef;
+  let floor;
   let figures = new Map();
   let animating = false;
   let dragging = false;
@@ -15,6 +17,8 @@ const Arena3D = (() => {
   let phi = 0.9;
   let visible = false;
   let lastSeenId = 0;
+  let primed = false;
+  let matchKey = "";
   let raf = 0;
   const queue = [];
   const radius = 9;
@@ -23,6 +27,24 @@ const Arena3D = (() => {
     if (player.npc) return 0x5a1a1a;
     if ((player.hp || 0) <= 0) return 0x3a3632;
     return COLORS[index % COLORS.length];
+  }
+
+  function fingerprint(room) {
+    const names = (room.players || []).map((player) => player.name).join(",");
+    return `${room.code || ""}|${room.status || ""}|${names}`;
+  }
+
+  function resetMatch(room) {
+    const key = fingerprint(room);
+    const ids = (room.eventos || []).map((ev) => ev.id).filter((id) => id != null);
+    const maxId = ids.length ? Math.max(...ids) : 0;
+    if (key !== matchKey || (maxId && maxId < lastSeenId)) {
+      matchKey = key;
+      primed = false;
+      lastSeenId = 0;
+      queue.length = 0;
+      animating = false;
+    }
   }
 
   function disposeObject(object) {
@@ -78,7 +100,7 @@ const Arena3D = (() => {
     sprite.position.y = 2.05;
     sprite.scale.set(2.2, 0.55, 1);
     group.add(body, sprite);
-    group.userData = { name: player.name, body, sprite, home: new THREE.Vector3() };
+    group.userData = { name: player.name, body, sprite, home: new THREE.Vector3(), labelKey: "" };
     return group;
   }
 
@@ -86,20 +108,58 @@ const Arena3D = (() => {
     const angle = (index / Math.max(total, 1)) * Math.PI * 2 - Math.PI / 2;
     const x = Math.cos(angle) * 3.4;
     const z = Math.sin(angle) * 3.4;
-    group.position.set(x, 0, z);
     group.userData.home.set(x, 0, z);
+    if (!animating) group.position.set(x, 0, z);
     const dead = (player.hp || 0) <= 0;
-    group.scale.set(1, dead ? 0.45 : 1, 1);
     const body = group.userData.body;
+    if (!animating) body.scale.set(1, dead ? 0.45 : 1, 1);
     body.material.color.setHex(colorFor(player, index));
     const active = player.name === currentTurn && !dead;
-    body.material.emissive.setHex(active ? 0xe8c547 : 0x000000);
-    body.material.emissiveIntensity = active ? 0.35 : 0;
+    if (!animating) {
+      body.material.emissive.setHex(active ? 0xe8c547 : 0x000000);
+      body.material.emissiveIntensity = active ? 0.35 : 0;
+    }
     const sprite = group.userData.sprite;
+    const labelKey = `${player.name}|${player.hp}|${player.max_hp}|${active}|${dead}`;
+    if (group.userData.labelKey === labelKey) return;
+    group.userData.labelKey = labelKey;
     const old = sprite.material.map;
     sprite.material.map = makeLabelTexture(player, active);
     sprite.material.needsUpdate = true;
     if (old) old.dispose();
+  }
+
+  function flash(group, hex, ms = 280) {
+    if (!group) return;
+    const body = group.userData.body;
+    const prev = body.material.emissive.getHex();
+    const prevI = body.material.emissiveIntensity;
+    body.material.emissive.setHex(hex);
+    body.material.emissiveIntensity = 0.9;
+    setTimeout(() => {
+      body.material.emissive.setHex(prev);
+      body.material.emissiveIntensity = prevI;
+    }, ms);
+  }
+
+  function flashFloor(color = 0xd4a017) {
+    if (!floor) return;
+    const orig = floor.material.color.getHex();
+    floor.material.color.setHex(color);
+    setTimeout(() => {
+      floor.material.color.setHex(orig);
+    }, 520);
+  }
+
+  function showWaveBanner(onda) {
+    const el = document.getElementById("ondaBanner");
+    if (!el) return;
+    el.hidden = false;
+    el.textContent = `Onda ${onda || "?"} chegando`;
+    clearTimeout(el._hide);
+    el._hide = setTimeout(() => {
+      el.hidden = true;
+    }, 2200);
   }
 
   function mount(canvas) {
@@ -115,7 +175,7 @@ const Arena3D = (() => {
     const key = new THREE.DirectionalLight(0xffffff, 0.85);
     key.position.set(4, 8, 6);
     scene.add(key);
-    const floor = new THREE.Mesh(
+    floor = new THREE.Mesh(
       new THREE.CylinderGeometry(5.2, 5.2, 0.25, 48),
       new THREE.MeshStandardMaterial({ color: 0x3d3a36, roughness: 0.85 })
     );
@@ -177,24 +237,37 @@ const Arena3D = (() => {
     });
   }
 
-  function playNext() {
-    if (animating || !queue.length) return;
-    const ataque = queue.shift();
-    const from = figures.get(ataque.de);
-    const to = figures.get(ataque.para);
-    if (!from || !to) {
+  function playDeath(who) {
+    animating = true;
+    const body = who.userData.body;
+    const start = performance.now();
+    flash(who, 0x3a3632, 500);
+    function tick(now) {
+      const t = Math.min(1, (now - start) / 480);
+      body.scale.set(1, 1 - 0.55 * t, 1);
+      if (t < 1) {
+        requestAnimationFrame(tick);
+        return;
+      }
+      body.scale.set(1, 0.45, 1);
+      animating = false;
       playNext();
-      return;
     }
+    requestAnimationFrame(tick);
+  }
+
+  function playPunch(from, to, ev) {
     animating = true;
     const start = performance.now();
     const home = from.userData.home.clone();
     const toHome = to.userData.home.clone();
+    if (ev.tipo === "magia") flash(from, 0x6a9fbf, 420);
+    if (ev.critico) flash(to, 0xffffff, 360);
     function tick(now) {
       const t = Math.min(1, (now - start) / 420);
       const punch = t < 0.5 ? t * 2 : (1 - t) * 2;
       from.position.lerpVectors(home, toHome, punch * 0.45);
-      to.position.y = (ataque.acertou || ataque.dano || ataque.cura ? Math.sin(t * Math.PI) * 0.25 : 0);
+      to.position.y = ev.acertou || ev.dano || ev.cura ? Math.sin(t * Math.PI) * 0.25 : 0;
       if (t < 1) {
         requestAnimationFrame(tick);
         return;
@@ -207,13 +280,56 @@ const Arena3D = (() => {
     requestAnimationFrame(tick);
   }
 
+  function playNext() {
+    if (animating || !queue.length) return;
+    const ev = queue.shift();
+    if (ev.tipo === "onda") {
+      showWaveBanner(ev.onda);
+      flashFloor(0xd4a017);
+      playNext();
+      return;
+    }
+    const from = figures.get(ev.de);
+    const to = figures.get(ev.para);
+    if (ev.tipo === "morte") {
+      const who = from || to;
+      if (!who) {
+        playNext();
+        return;
+      }
+      playDeath(who);
+      return;
+    }
+    if (ev.tipo === "cura" || ev.cura) {
+      flash(to || from, 0x769656, 420);
+      if (ev.tipo === "cura") {
+        playNext();
+        return;
+      }
+    }
+    if (!from || !to) {
+      playNext();
+      return;
+    }
+    playPunch(from, to, ev);
+  }
+
   function playEvents(eventos) {
+    let maxId = lastSeenId;
+    const fresh = [];
     for (const ev of eventos || []) {
       const id = ev.id;
+      if (id != null) maxId = Math.max(maxId, id);
       if (id != null && id <= lastSeenId) continue;
-      if (id != null) lastSeenId = Math.max(lastSeenId, id);
-      if (ev.tipo === "ataque" || ev.tipo === "magia") queue.push(ev);
+      if (QUEUE_TYPES.has(ev.tipo) || ev.critico) fresh.push(ev);
     }
+    if (!primed) {
+      lastSeenId = maxId;
+      primed = true;
+      return;
+    }
+    lastSeenId = maxId;
+    for (const ev of fresh) queue.push(ev);
     playNext();
   }
 
@@ -232,7 +348,8 @@ const Arena3D = (() => {
   }
 
   function render(room) {
-    if (!renderer || !visible) return;
+    if (!renderer || !visible || !room) return;
+    resetMatch(room);
     place(room.players || [], room.current_turn);
     playEvents(room.eventos || []);
   }
