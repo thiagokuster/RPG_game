@@ -20,25 +20,25 @@ class TestSistemaAvancado(unittest.TestCase):
         self.assertGreater(monstro.dano, 0)
 
     def test_evento_monstro_nao_ativa_tarde_demais_no_inicio(self):
-        partida = Partida([Jogador.criar_por_classe("A", "Guerreiro")])
+        partida = Partida([Jogador.criar("A", passiva="Bruto")])
         with patch("partida.partida.randint", return_value=3):
             evento = partida.gerar_evento_monstro(rodada=1)
             self.assertIsNone(evento)
 
     def test_partida_termina_apenas_com_um_vivo(self):
         partida = Partida([
-            Jogador.criar_por_classe("A", "Guerreiro"),
-            Jogador.criar_por_classe("B", "Guerreiro"),
+            Jogador.criar("A", passiva="Bruto"),
+            Jogador.criar("B", passiva="Bruto"),
         ])
         self.assertFalse(partida.fim_partida())
 
-        partida.jogadores = [Jogador.criar_por_classe("C", "Guerreiro")]
+        partida.jogadores = [Jogador.criar("C", passiva="Bruto")]
         self.assertTrue(partida.fim_partida())
 
     def test_partida_termina_quando_todos_morrem(self):
         partida = Partida([
-            Jogador.criar_por_classe("A", "Guerreiro"),
-            Jogador.criar_por_classe("B", "Guerreiro"),
+            Jogador.criar("A", passiva="Bruto"),
+            Jogador.criar("B", passiva="Bruto"),
         ])
         partida.jogadores = []
         self.assertTrue(partida.fim_partida())

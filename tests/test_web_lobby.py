@@ -21,7 +21,7 @@ class TestLobby(unittest.TestCase):
         room = lobby.create_room("Alice")
         lobby.join_room("Bob", room["code"])
 
-        match = lobby.start_match(room["code"], classes={"Alice": "Guerreiro", "Bob": "Mago"}, token=lobby.token_of(room["code"], "Alice"))
+        match = lobby.start_match(room["code"], classes={"Alice": "Bruto", "Bob": "Arcano"}, token=lobby.token_of(room["code"], "Alice"))
 
         self.assertEqual(match["status"], "started")
         self.assertEqual(match["current_turn"], "Alice")
@@ -31,7 +31,7 @@ class TestLobby(unittest.TestCase):
         lobby = Lobby()
         room = lobby.create_room("Alice")
         lobby.join_room("Bob", room["code"])
-        lobby.start_match(room["code"], classes={"Alice": "Guerreiro", "Bob": "Mago"}, token=lobby.token_of(room["code"], "Alice"))
+        lobby.start_match(room["code"], classes={"Alice": "Bruto", "Bob": "Arcano"}, token=lobby.token_of(room["code"], "Alice"))
 
         result = lobby.perform_action(room["code"], "Alice", "attack", "Bob", token=lobby.token_of(room["code"], "Alice"))
 
@@ -44,18 +44,18 @@ class TestLobby(unittest.TestCase):
         lobby.join_room("Bob", room["code"])
         lobby.join_room("Charlie", room["code"])
         lobby.start_match(room["code"], classes={
-            "Alice": "Guerreiro",
-            "Bob": "Mago",
-            "Charlie": "Arqueiro",
+            "Alice": "Bruto",
+            "Bob": "Arcano",
+            "Charlie": "Preciso",
         }, token=lobby.token_of(room["code"], "Alice"))
 
         room_data = lobby.rooms[room["code"]]
         room_data["current_turn"] = "Bob"
         room_data["match"].jogadores[1].hp = 0
         room_data["players"] = [
-            {"name": "Alice", "classe": "Guerreiro", "hp": 100, "max_hp": 100, "obj": room_data["match"].jogadores[0]},
-            {"name": "Bob", "classe": "Mago", "hp": 0, "max_hp": 100, "obj": room_data["match"].jogadores[1]},
-            {"name": "Charlie", "classe": "Arqueiro", "hp": 100, "max_hp": 100, "obj": room_data["match"].jogadores[2]},
+            {"name": "Alice", "classe": "Bruto", "hp": 100, "max_hp": 100, "obj": room_data["match"].jogadores[0]},
+            {"name": "Bob", "classe": "Arcano", "hp": 0, "max_hp": 100, "obj": room_data["match"].jogadores[1]},
+            {"name": "Charlie", "classe": "Preciso", "hp": 100, "max_hp": 100, "obj": room_data["match"].jogadores[2]},
         ]
 
         next_turn = lobby._next_turn(room_data, room_data["match"])
@@ -121,16 +121,16 @@ class TestLobby(unittest.TestCase):
         lobby = Lobby()
         room = lobby.create_room("Alice")
         lobby.join_room("Bob", room["code"])
-        lobby.start_match(room["code"], classes={"Alice": "Guerreiro", "Bob": "Mago"}, token=lobby.token_of(room["code"], "Alice"))
+        lobby.start_match(room["code"], classes={"Alice": "Bruto", "Bob": "Arcano"}, token=lobby.token_of(room["code"], "Alice"))
 
         with self.assertRaisesRegex(ValueError, "já foi iniciada"):
-            lobby.start_match(room["code"], classes={"Alice": "Guerreiro", "Bob": "Mago"}, token=lobby.token_of(room["code"], "Alice"))
+            lobby.start_match(room["code"], classes={"Alice": "Bruto", "Bob": "Arcano"}, token=lobby.token_of(room["code"], "Alice"))
 
     def test_somente_anfitriao_inicia_e_token_impede_impersonacao(self):
         lobby = Lobby()
         room = lobby.create_room("Alice")
         lobby.join_room("Bob", room["code"])
-        classes = {"Alice": "Guerreiro", "Bob": "Mago"}
+        classes = {"Alice": "Bruto", "Bob": "Arcano"}
 
         with self.assertRaisesRegex(ValueError, "Sessão inválida"):
             lobby.start_match(room["code"], classes=classes)
@@ -156,7 +156,7 @@ class TestLobby(unittest.TestCase):
         lobby.join_room("Bob", room["code"])
         lobby.start_match(
             room["code"],
-            classes={"Alice": "Guerreiro", "Bob": "Mago"},
+            classes={"Alice": "Bruto", "Bob": "Arcano"},
             token=lobby.token_of(room["code"], "Alice"),
         )
         partida = lobby.rooms[room["code"]]["match"]
@@ -192,7 +192,7 @@ class TestLobby(unittest.TestCase):
         lobby.join_room("Bob", room["code"])
         started = lobby.start_match(
             room["code"],
-            {"Alice": "Guerreiro", "Bob": "Mago"},
+            {"Alice": "Bruto", "Bob": "Arcano"},
             token=lobby.token_of(room["code"], "Alice"),
             modo="coop",
         )

@@ -52,14 +52,9 @@ class Jogador:
         self.critico = 20
         self.bonus_acerto = 0
         self.mana_por_rodada = 0
-        self.cura_fator = 1
-        self.cura_e_ataque = False
-        self.rajada_extra_se_ferido = False
-        self.tiro_multiplo = False
         self.kit = None
         self.gasta_turno = True
         self.extra_disponivel = True
-        self.usou_folego = False
         self.arma: Equipamento = None
         self.anel = None
         self.armadura = None
@@ -91,9 +86,6 @@ class Jogador:
     def criar_por_classe(cls, nome, classe=None, nivel=1):
         return cls.criar(nome, nivel=nivel, passiva=classe)
 
-    def aplicar_classe(self, classe=None):
-        self.aplicar_passiva(classe)
-
     def aplicar_base(self):
         config = self.BASE
         self.classe = "Aventureiro"
@@ -110,14 +102,9 @@ class Jogador:
         self.critico = 20
         self.bonus_acerto = 0
         self.mana_por_rodada = 0
-        self.cura_fator = 1
-        self.cura_e_ataque = False
-        self.rajada_extra_se_ferido = False
-        self.tiro_multiplo = False
         self.kit = config.get("kit")
         self.gasta_turno = True
         self.extra_disponivel = True
-        self.usou_folego = False
 
     def aplicar_passiva(self, passiva=None):
         self.aplicar_base()
@@ -219,8 +206,6 @@ class Jogador:
         magia = next((m for m in self.magias if m.nome.lower() == nome_magia.lower()), None)
         if magia is None or self.hp <= 0 or alvo is None:
             return False
-        if magia.nome == "Segundo Folego" and self.usou_folego:
-            return False
         if self.mana < magia.custo:
             return False
 
@@ -230,7 +215,6 @@ class Jogador:
             if getattr(alvo, "hp", 0) <= 0:
                 self.mana += magia.custo
                 return False
-            ferido = getattr(alvo, "max_hp", 0) > 0 and alvo.hp < alvo.max_hp
             bruto = magia.dano + self.dano_bonus
             if hasattr(alvo, "receber_dano"):
                 aplicado = alvo.receber_dano(bruto)
@@ -238,9 +222,6 @@ class Jogador:
             else:
                 alvo.hp = max(0, alvo.hp - bruto)
                 dano = bruto
-            if self.rajada_extra_se_ferido and ferido and self.extra_disponivel:
-                self.gasta_turno = False
-                self.extra_disponivel = False
             eventos = [evento("magia", de=self.nome, para=nome(alvo), magia=magia.nome, dano=dano, cura=0, critico=False)]
             if getattr(alvo, "hp", 0) <= 0:
                 eventos.append(evento("morte", de=nome(alvo)))
@@ -249,13 +230,8 @@ class Jogador:
             if getattr(alvo, "hp", 0) <= 0:
                 self.mana += magia.custo
                 return False
-            cura = int((magia.cura + self.dano_bonus) * getattr(self, "cura_fator", 1))
+            cura = magia.cura + self.dano_bonus
             alvo.hp = min(alvo.max_hp, alvo.hp + cura)
-            if magia.nome == "Segundo Folego":
-                self.usou_folego = True
-            if self.cura_e_ataque and self.extra_disponivel:
-                self.gasta_turno = False
-                self.extra_disponivel = False
             return evento(
                 "magia",
                 de=self.nome,

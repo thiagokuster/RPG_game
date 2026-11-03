@@ -89,9 +89,6 @@ def resolver_ataque(atacante, alvo):
         eventos.append(evento("armadura", de=para, reduzido=aplicado.get("reduzido", 0), quebrou=True))
     if getattr(alvo, "hp", 0) <= 0:
         eventos.append(evento("morte", de=para))
-    if getattr(atacante, "tiro_multiplo", False) and getattr(atacante, "extra_disponivel", False):
-        atacante.gasta_turno = False
-        atacante.extra_disponivel = False
     return {
         "tipo": "ataque",
         "de": de,

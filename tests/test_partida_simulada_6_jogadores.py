@@ -13,18 +13,6 @@ from web.lobby import Lobby
 from web.site import LobbyRequestHandler
 
 
-class _Nada:
-    def start(self):
-        return self
-
-    def stop(self):
-        return None
-
-
-def silenciar_sleep():
-    return _Nada()
-
-
 class SequenciaDados:
     def __init__(self, d20s=None, d10s=None):
         self.d20s = list(d20s or [])
@@ -48,14 +36,9 @@ NOMES = ["Ana", "Bruno", "Carla", "Diego", "Eva", "Fabio"]
 
 class TestPartidaSimulada6Jogadores(unittest.TestCase):
     def setUp(self):
-        self.sleep = silenciar_sleep()
-        self.sleep.start()
         self.jogadores = Jogador.criar_elenco(NOMES)
         self.partida = Partida(self.jogadores)
         self.log = []
-
-    def tearDown(self):
-        self.sleep.stop()
 
     def registrar(self, mensagem):
         self.log.append(mensagem)

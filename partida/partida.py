@@ -49,9 +49,7 @@ class Partida:
     @classmethod
     def registrar_jogadores(cls, qj, hp=100, classes=None):
         nomes = [f"Jogador {i + 1}" for i in range(qj)]
-        passivas = None
-        if classes:
-            passivas = {nomes[i]: classes[i] for i in range(min(len(nomes), len(classes)))}
+        passivas = {nomes[i]: classes[i] for i in range(min(len(nomes), len(classes or [])))} or None
         return Jogador.criar_elenco(nomes, passivas)
 
     def carimbar(self, eventos):

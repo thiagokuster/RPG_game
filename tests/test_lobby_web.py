@@ -9,7 +9,7 @@ class TestLobbyWeb(unittest.TestCase):
         self.lobby = Lobby()
         self.room = self.lobby.create_room("Alice")
         self.lobby.join_room("Bob", self.room["code"])
-        self.lobby.start_match(self.room["code"], {"Alice": "Guerreiro", "Bob": "Mago"}, token=self.lobby.token_of(self.room["code"], "Alice"))
+        self.lobby.start_match(self.room["code"], {"Alice": "Bruto", "Bob": "Arcano"}, token=self.lobby.token_of(self.room["code"], "Alice"))
 
     def test_snapshot_inclui_magias_inventario_e_loja(self):
         state = self.lobby.get_room(self.room["code"])["room"]

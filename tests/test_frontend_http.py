@@ -71,7 +71,7 @@ class TestFrontendBackend(unittest.TestCase):
 
         status, started = self._post("/api/start-match", {
             "room": code,
-            "classes": {"Ana": "Guerreiro", "Bruno": "Mago"},
+            "classes": {"Ana": "Bruto", "Bruno": "Arcano"},
             "token": created["token"],
         })
         self.assertEqual(status, 200)
@@ -96,21 +96,21 @@ class TestFrontendBackend(unittest.TestCase):
         with self.assertRaises(urllib.error.HTTPError) as contexto:
             self._post("/api/start-match", {
                 "room": code,
-                "classes": {"AnaAuth": "Guerreiro", "BrunoAuth": "Mago"},
+                "classes": {"AnaAuth": "Bruto", "BrunoAuth": "Arcano"},
             })
         self.assertEqual(contexto.exception.code, 400)
 
         with self.assertRaises(urllib.error.HTTPError) as contexto:
             self._post("/api/start-match", {
                 "room": code,
-                "classes": {"AnaAuth": "Guerreiro", "BrunoAuth": "Mago"},
+                "classes": {"AnaAuth": "Bruto", "BrunoAuth": "Arcano"},
                 "token": joined["token"],
             })
         self.assertEqual(contexto.exception.code, 400)
 
         status, started = self._post("/api/start-match", {
             "room": code,
-            "classes": {"AnaAuth": "Guerreiro", "BrunoAuth": "Mago"},
+            "classes": {"AnaAuth": "Bruto", "BrunoAuth": "Arcano"},
             "token": created["token"],
         })
         self.assertEqual(status, 200)

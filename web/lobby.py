@@ -443,8 +443,6 @@ class Lobby:
             }
             return self._concluir(room, room_name, payload)
 
-            return {"error": "Ação indisponível neste lobby.", "current_turn": room["current_turn"]}
-
     @staticmethod
     def _serialize_item(item):
         return {

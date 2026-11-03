@@ -610,7 +610,7 @@ class LobbyServer:
             match = self.room_state[room_name].get("match")
             if match is not None:
                 room["match"] = {
-                    "players": [{"nome": j.nome, "classe": j.classe, "hp": j.hp, "max_hp": j.max_hp, "moedas": j.moedas, "nivel": j.nivel, "experiencia": j.experiencia, "mana": j.mana, "max_mana": j.max_mana} for j in match.jogadores],
+                    "players": [{"nome": j.nome, "classe": j.classe, "passiva": getattr(j, "passiva", None), "hp": j.hp, "max_hp": j.max_hp, "moedas": j.moedas, "nivel": j.nivel, "experiencia": j.experiencia, "mana": j.mana, "max_mana": j.max_mana} for j in match.jogadores],
                     "mortos": [j.nome for j in match.mortos],
                 }
         self.state_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -640,7 +640,10 @@ class LobbyServer:
                 "rodada": room_data.get("rodada", 1),
             }
             if room_data.get("match"):
-                players = [Jogador.criar_por_classe(j["nome"], j["classe"]) for j in room_data["match"]["players"]]
+                players = [
+                    Jogador.criar(j["nome"], passiva=j.get("passiva") or j.get("classe"))
+                    for j in room_data["match"]["players"]
+                ]
                 for player, saved in zip(players, room_data["match"]["players"]):
                     player.hp = saved["hp"]
                     player.max_hp = saved["max_hp"]

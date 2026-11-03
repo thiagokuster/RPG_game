@@ -6,7 +6,7 @@ const els = {
   joinStatus: document.getElementById("joinStatus"),
   roomsList: document.getElementById("roomsList"),
   waiting: document.getElementById("waiting"),
-  classBox: document.getElementById("classBox"),
+  passivaBox: document.getElementById("passivaBox"),
   waitingPlayers: document.getElementById("waitingPlayers"),
   createRoomBtn: document.getElementById("createRoomBtn"),
   createPassword: document.getElementById("createPassword"),
@@ -42,7 +42,7 @@ const PASSIVAS = ["Bruto", "Arcano", "Preciso"];
 
 function selectedPassivas() {
   const selected = {};
-  els.classBox.querySelectorAll("select").forEach((select) => {
+  els.passivaBox.querySelectorAll("select").forEach((select) => {
     selected[select.dataset.player] = select.value;
   });
   return selected;
@@ -50,7 +50,7 @@ function selectedPassivas() {
 
 function renderPlayers(players) {
   const previous = selectedPassivas();
-  els.classBox.replaceChildren();
+  els.passivaBox.replaceChildren();
   players.forEach((player, index) => {
     const name = player.name || player;
     const label = document.createElement("label");
@@ -65,7 +65,7 @@ function renderPlayers(players) {
     });
     select.value = previous[name] || PASSIVAS[index % PASSIVAS.length];
     label.append(select);
-    els.classBox.append(label);
+    els.passivaBox.append(label);
   });
 }
 

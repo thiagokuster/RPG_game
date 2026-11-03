@@ -15,24 +15,6 @@ from partida import Partida
 from web.lobby import Lobby
 
 
-class _Nada:
-    def start(self):
-        return self
-
-    def stop(self):
-        return None
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc):
-        return False
-
-
-def silenciar_sleep():
-    return _Nada()
-
-
 class SequenciaDados:
     def __init__(self, d20s=None, d10s=None):
         self.d20s = list(d20s or [])
@@ -53,8 +35,6 @@ def amarrar_dados(jogadores, dados):
 
 class TestPartidaSimulada5Jogadores(unittest.TestCase):
     def setUp(self):
-        self.sleep = silenciar_sleep()
-        self.sleep.start()
         self.ana = Jogador.criar("Ana", passiva="Bruto")
         self.bruno = Jogador.criar("Bruno", passiva="Arcano")
         self.carla = Jogador.criar("Carla", passiva="Preciso")
@@ -64,9 +44,6 @@ class TestPartidaSimulada5Jogadores(unittest.TestCase):
         self.partida = Partida(self.jogadores)
         self.loja = Loja()
         self.log = []
-
-    def tearDown(self):
-        self.sleep.stop()
 
     def registrar(self, mensagem):
         self.log.append(mensagem)

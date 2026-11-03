@@ -7,8 +7,8 @@ from jogador import Jogador
 
 class TestArmadura(unittest.TestCase):
     def test_armadura_reduz_dano_e_perde_durabilidade(self):
-        ana = Jogador.criar_por_classe("Ana", "Guerreiro")
-        bruno = Jogador.criar_por_classe("Bruno", "Mago")
+        ana = Jogador.criar("Ana", passiva="Bruto")
+        bruno = Jogador.criar("Bruno", passiva="Arcano")
         peca = Equipamento("Couraça", tipo="armadura", armadura=2, reducao=5, durabilidade=8)
         bruno.adicionar_item_inventario(peca)
         bruno.equipar(peca)
@@ -26,8 +26,8 @@ class TestArmadura(unittest.TestCase):
         self.assertEqual(bruno.armadura.durabilidade, 3)
 
     def test_armadura_quebra_e_sai_do_inventario(self):
-        ana = Jogador.criar_por_classe("Ana", "Guerreiro")
-        bruno = Jogador.criar_por_classe("Bruno", "Mago")
+        ana = Jogador.criar("Ana", passiva="Bruto")
+        bruno = Jogador.criar("Bruno", passiva="Arcano")
         peca = Equipamento("Gibão", tipo="armadura", armadura=1, reducao=20, durabilidade=2)
         bruno.adicionar_item_inventario(peca)
         bruno.equipar(peca)
@@ -43,8 +43,8 @@ class TestArmadura(unittest.TestCase):
         self.assertEqual(bruno.armor_class, ca_base)
 
     def test_ataque_sem_armadura_mantem_dano_cheio(self):
-        ana = Jogador.criar_por_classe("Ana", "Guerreiro")
-        bruno = Jogador.criar_por_classe("Bruno", "Mago")
+        ana = Jogador.criar("Ana", passiva="Bruto")
+        bruno = Jogador.criar("Bruno", passiva="Arcano")
         ana.d20 = lambda: 20
         ana.d10 = lambda: 5
         hp_antes = bruno.hp

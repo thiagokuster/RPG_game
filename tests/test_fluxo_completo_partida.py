@@ -11,9 +11,9 @@ from partida import Partida
 
 class TestFluxoCompletoPartida(unittest.TestCase):
     def test_jogadores_completam_loja_magias_monstros_equipamento(self):
-        guerreiro = Jogador.criar_por_classe("Guerreiro", "Guerreiro")
+        guerreiro = Jogador.criar("Guerreiro", passiva="Bruto")
         guerreiro.magias.append(Magia.bola_de_fogo())
-        mago = Jogador.criar_por_classe("Mago", "Mago")
+        mago = Jogador.criar("Mago", passiva="Arcano")
         loja = Loja()
 
         loja.estoque = [

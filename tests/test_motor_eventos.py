@@ -7,8 +7,8 @@ from motor.eventos import texto
 
 class TestMotorEventos(unittest.TestCase):
     def test_ataque_devolve_evento_sem_io(self):
-        ana = Jogador.criar_por_classe("Ana", "Guerreiro")
-        bruno = Jogador.criar_por_classe("Bruno", "Mago")
+        ana = Jogador.criar("Ana", passiva="Bruto")
+        bruno = Jogador.criar("Bruno", passiva="Arcano")
         ana.d20 = lambda: 20
         ana.d10 = lambda: 5
         resultado = resolver_ataque(ana, bruno)
@@ -21,8 +21,8 @@ class TestMotorEventos(unittest.TestCase):
         self.assertIn("atacou", texto(resultado["eventos"][0]))
 
     def test_magia_devolve_evento(self):
-        bruno = Jogador.criar_por_classe("Bruno", "Mago")
-        ana = Jogador.criar_por_classe("Ana", "Guerreiro")
+        bruno = Jogador.criar("Bruno", passiva="Arcano")
+        ana = Jogador.criar("Ana", passiva="Bruto")
         resultado = bruno.usar_magia("Bola de Fogo", ana)
         self.assertEqual(resultado["tipo"], "magia")
         self.assertEqual(resultado["de"], "Bruno")
