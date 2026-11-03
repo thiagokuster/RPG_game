@@ -41,6 +41,26 @@ class Magia:
         )
 
     @classmethod
+    def segundo_folego(cls):
+        return cls(
+            nome="Segundo Folego",
+            tipo="cura",
+            cura=20,
+            custo=0,
+            descricao="Recupera fôlego uma vez por combate.",
+        )
+
+    @classmethod
+    def punicao_divina(cls):
+        return cls(
+            nome="Punicao Divina",
+            tipo="dano",
+            dano=16,
+            custo=2,
+            descricao="Golpe sagrado contra o alvo.",
+        )
+
+    @classmethod
     def golpe_de_energia(cls):
         return cls(
             nome="Golpe de Energia",

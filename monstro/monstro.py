@@ -1,5 +1,7 @@
 from random import choice, randint
 
+from motor.eventos import evento, nome
+
 
 class Monstro:
     def __init__(self, nome, hp, ataque_bonus, armor_class, dano, xp=25, recompensa=10, tipo="bestia"):
@@ -12,6 +14,11 @@ class Monstro:
         self.xp = xp
         self.recompensa = recompensa
         self.tipo = tipo
+        self.classe = tipo
+        self.mana = 0
+        self.max_mana = 0
+        self.critico = 20
+        self.bonus_ataque_total = ataque_bonus
 
     @classmethod
     def gerar_monstro(cls, nivel=1):
@@ -25,16 +32,30 @@ class Monstro:
 
         nivel_ajustado = max(1, min(nivel, len(fichas)))
         escolha = fichas[min(len(fichas) - 1, nivel_ajustado - 1)]
-        nome, hp, ataque_bonus, armor_class, dano, xp, recompensa, tipo = escolha
+        nome_monstro, hp, ataque_bonus, armor_class, dano, xp, recompensa, tipo = escolha
 
         if nivel >= 4:
-            nome = choice([nome, "Bandido da Selva", "Basilisco Pequeno", "Rastejador"])
+            nome_monstro = choice([nome_monstro, "Bandido da Selva", "Basilisco Pequeno", "Rastejador"])
             hp += 15
             ataque_bonus += 1
             dano += 2
             recompensa += 10
 
-        return cls(nome, hp, ataque_bonus, armor_class, dano, xp, recompensa, tipo)
+        return cls(nome_monstro, hp, ataque_bonus, armor_class, dano, xp, recompensa, tipo)
+
+    @classmethod
+    def gerar_chefe(cls, onda=1):
+        hp = 40 + onda * 18
+        return cls(
+            nome=f"Chefe da onda {onda}",
+            hp=hp,
+            ataque_bonus=4 + onda,
+            armor_class=13 + min(4, onda),
+            dano=8 + onda,
+            xp=40 + onda * 15,
+            recompensa=20 + onda * 8,
+            tipo="chefe",
+        )
 
     def atacar(self, alvo):
         ataque = randint(1, 20) + self.ataque_bonus
@@ -46,10 +67,15 @@ class Monstro:
             else:
                 alvo.hp = max(0, getattr(alvo, "hp", 0) - bruto)
                 dano = bruto
-            print(f"{self.nome} atingiu {alvo.nome} e causou {dano} de dano!")
-            return dano
-        print(f"{self.nome} errou o ataque contra {alvo.nome}.")
-        return 0
+            morto = getattr(alvo, "hp", 0) <= 0
+            resultado = evento("ataque", de=self.nome, para=nome(alvo), acertou=True, dano=dano, critico=False)
+            resultado["eventos"] = [resultado]
+            if morto:
+                resultado["eventos"].append(evento("morte", de=nome(alvo)))
+            return resultado
+        resultado = evento("ataque", de=self.nome, para=nome(alvo), acertou=False, dano=0, critico=False)
+        resultado["eventos"] = [resultado]
+        return resultado
 
     def __repr__(self):
         return f"Monstro(nome={self.nome}, hp={self.hp}, dano={self.dano})"

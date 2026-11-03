@@ -23,8 +23,10 @@ Não há deploy público. A partida roda na sua máquina ou na rede interna:
 
 ## ✨ Funcionalidades
 
-- Cinco classes com identidade própria
+- Motor de combate devolve eventos JSON; o terminal, o lobby e a arena 3D só exibem
+- Todo mundo começa como aventureiro igual; a diferença vem da loja, do equipamento e das magias
 - Combate por turnos com ataque, magia, loja e inventário
+- Arena 3D opcional (Three.js) e modo co-op contra chefe
 - Armadura com redução de dano e durabilidade
 - Eventos aleatórios (tesouro, aposta, risco e monstros)
 - Lobby web com salas, senha opcional e no máximo 6 jogadores
@@ -32,25 +34,21 @@ Não há deploy público. A partida roda na sua máquina ou na rede interna:
 - Servidor TCP com reconexão após reinício
 - Partida no terminal para um grupo no mesmo computador
 
-## ⚔️ Classes
+## ⚔️ Aventureiro
 
-Todas começam com 100 de HP, CA 14, +2 de ataque e +2 de dano. A diferença está no traço da classe.
+Todo jogador entra igual. O que muda o jogo é o que cada um compra, equipa e conjura.
 
-| Classe | Mana | Traço |
-| --- | --- | --- |
-| Guerreiro | 0 | Redução nativa 1 e crítico em 19 |
-| Mago | 6 | Bola de Fogo, Cura Leve e +1 de mana por rodada |
-| Arqueiro | 0 | +1 de acerto |
-| Paladino | 4 | Cura pela metade e pode atacar no mesmo turno |
-| Clérigo | 5 | Cura Leve e Rajada extra se o alvo já estiver ferido |
+| | HP | CA | Atq/Dano | Mana | Kit | Magias |
+| --- | --- | --- | --- | --- | --- | --- |
+| Aventureiro | 100 | 14 | +2/+2 | 4 | Espada de Treino | Bola de Fogo, Cura Leve, Rajada Congelante |
 
 ## 🎲 Combate
 
 - O ataque rola `d20 + bônus de ataque` contra a CA do alvo.
-- Em acerto, o dano usa `d10 + bônus`. Crítico (20, ou 19 no Guerreiro) dobra o dano.
+- Em acerto, o dano usa `d10 + bônus`. Crítico (20) dobra o dano.
 - Armadura reduz dano e perde durabilidade; cura não ressuscita eliminado.
 - Acerto concede 25 de XP. Há 1/3 de chance de ganhar moedas (como no terminal).
-- Magias gastam mana. Bola de Fogo causa 18, Rajada 12 e Cura Leve recupera 15.
+- Magias gastam mana. Bola de Fogo causa 18, Rajada 12 e Cura Leve recupera 15, mais o bônus de dano.
 
 ## 🔒 Rede
 

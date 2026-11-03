@@ -50,56 +50,77 @@ function render(room) {
     els.turnBanner.textContent = myTurn ? "Sua vez." : `Vez de ${room.current_turn || "—"}.`;
   }
 
-  els.seats.innerHTML = players.map((player) => {
+  els.seats.replaceChildren();
+  players.forEach((player) => {
     const dead = player.hp <= 0;
-    const classes = ["seat"];
-    if (player.name === room.current_turn) classes.push("active");
-    if (player.name === playerName) classes.push("you");
-    if (dead) classes.push("dead");
-    if (selectedTarget === player.name) classes.push("selected");
-    return `
-      <article class="${classes.join(" ")}" data-name="${player.name}">
-        <h3>${player.name}</h3>
-        <div class="meta">${player.classe} · CA ${player.armor_class || "-"} · Nv ${player.nivel || 1}</div>
-        <div class="bar"><span class="hp" style="width:${percent(player.hp, player.max_hp)}%"></span></div>
-        <div class="meta">HP ${player.hp}/${player.max_hp} · Mana ${player.mana || 0}/${player.max_mana || 0} · ${player.moedas || 0} moedas</div>
-      </article>
-    `;
-  }).join("");
-
-  els.seats.querySelectorAll(".seat").forEach((seat) => {
-    seat.addEventListener("click", () => {
-      selectedTarget = seat.dataset.name;
+    const article = document.createElement("article");
+    article.className = "seat";
+    if (player.name === room.current_turn) article.classList.add("active");
+    if (player.name === playerName) article.classList.add("you");
+    if (dead) article.classList.add("dead");
+    if (selectedTarget === player.name) article.classList.add("selected");
+    article.dataset.name = player.name;
+    const title = document.createElement("h3");
+    title.textContent = player.name;
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.textContent = `CA ${player.armor_class || "-"} · Nv ${player.nivel || 1}`;
+    const bar = document.createElement("div");
+    bar.className = "bar";
+    const hp = document.createElement("span");
+    hp.className = "hp";
+    hp.style.width = `${percent(player.hp, player.max_hp)}%`;
+    bar.append(hp);
+    const stats = document.createElement("div");
+    stats.className = "meta";
+    stats.textContent = `HP ${player.hp}/${player.max_hp} · Mana ${player.mana || 0}/${player.max_mana || 0} · ${player.moedas || 0} moedas`;
+    article.append(title, meta, bar, stats);
+    article.addEventListener("click", () => {
+      selectedTarget = player.name;
       els.target.value = selectedTarget;
       render(room);
     });
+    els.seats.append(article);
   });
 
-  els.target.innerHTML = players
-    .filter((player) => player.hp > 0)
-    .map((player) => `<option value="${player.name}">${player.name}</option>`)
-    .join("");
+  els.target.replaceChildren();
+  players.filter((player) => player.hp > 0).forEach((player) => {
+    const option = document.createElement("option");
+    option.value = player.name;
+    option.textContent = player.name;
+    els.target.append(option);
+  });
   if (!selectedTarget || selectedTarget === playerName) {
     const enemy = players.find((player) => player.name !== playerName && player.hp > 0);
     selectedTarget = enemy ? enemy.name : selectedTarget;
   }
   if (selectedTarget) els.target.value = selectedTarget;
 
-  els.magic.innerHTML = (me?.magias || [])
-    .map((magic) => `<option value="${magic.nome}">${magic.nome} (${magic.custo})</option>`)
-    .join("");
-  els.item.innerHTML = (me?.inventory || [])
-    .map((item, index) => `<option value="${index}">${item.nome}</option>`)
-    .join("");
-  els.shop.innerHTML = (room.shop || [])
-    .map((item, index) => {
-      const extras = [];
-      if (item.raridade) extras.push(item.raridade);
-      if (item.tipo === "armadura" && item.reducao) extras.push(`red ${item.reducao}`);
-      if (item.tipo === "arma" && item.dano) extras.push(`dano ${item.dano}`);
-      return `<option value="${index}">${item.nome} ${extras.join(" ")} (${item.valor})</option>`;
-    })
-    .join("");
+  els.magic.replaceChildren();
+  (me?.magias || []).forEach((magic) => {
+    const option = document.createElement("option");
+    option.value = magic.nome;
+    option.textContent = `${magic.nome} (${magic.custo})`;
+    els.magic.append(option);
+  });
+  els.item.replaceChildren();
+  (me?.inventory || []).forEach((item, index) => {
+    const option = document.createElement("option");
+    option.value = String(index);
+    option.textContent = item.nome;
+    els.item.append(option);
+  });
+  els.shop.replaceChildren();
+  (room.shop || []).forEach((item, index) => {
+    const extras = [];
+    if (item.raridade) extras.push(item.raridade);
+    if (item.tipo === "armadura" && item.reducao) extras.push(`red ${item.reducao}`);
+    if (item.tipo === "arma" && item.dano) extras.push(`dano ${item.dano}`);
+    const option = document.createElement("option");
+    option.value = String(index);
+    option.textContent = `${item.nome} ${extras.join(" ")} (${item.valor})`;
+    els.shop.append(option);
+  });
 
   const ended = room.status === "finished";
   [els.attack, els.magicBtn, els.shopBtn, els.buyBtn, els.equipBtn].forEach((button) => {
@@ -109,6 +130,9 @@ function render(room) {
   const lines = (room.log || []).map((entry) => entry.text || entry).join("\n");
   els.log.textContent = lines || "Aguardando lances...";
   els.log.scrollTop = els.log.scrollHeight;
+  if (window.Arena3D && !document.getElementById("arena3d").hidden) {
+    window.Arena3D.render(room);
+  }
 }
 
 async function act(payload) {
@@ -137,6 +161,20 @@ els.equipBtn.addEventListener("click", () => act({ action: "equip", item_index: 
 els.target.addEventListener("change", () => {
   selectedTarget = els.target.value;
 });
+
+const toggle3d = document.getElementById("toggle3d");
+const canvas3d = document.getElementById("arena3d");
+if (toggle3d && canvas3d) {
+  toggle3d.addEventListener("click", () => {
+    const on = canvas3d.hidden;
+    if (window.Arena3D) {
+      window.Arena3D.show(canvas3d, on);
+    } else {
+      canvas3d.hidden = !on;
+    }
+    toggle3d.textContent = on ? "Tabuleiro 2D" : "Arena 3D";
+  });
+}
 
 async function boot() {
   if (!roomCode || !playerName || !playerToken) {

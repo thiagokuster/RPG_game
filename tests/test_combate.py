@@ -33,7 +33,7 @@ class TestCombate(unittest.TestCase):
 
         hp_antes = alvo.hp
         self.assertTrue(combate.atacar())
-        self.assertEqual(alvo.hp, hp_antes - 33)
+        self.assertEqual(alvo.hp, hp_antes - 34)
 
 
 if __name__ == "__main__":

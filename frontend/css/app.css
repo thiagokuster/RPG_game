@@ -198,6 +198,20 @@ button:disabled {
 
 .actions { display: grid; gap: 8px; }
 
+#arena3d {
+  width: 100%;
+  height: 380px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #111;
+  display: block;
+}
+
+#modoCoop {
+  width: auto;
+  margin: 0 8px 0 0;
+}
+
 @media (max-width: 860px) {
   .layout { grid-template-columns: 1fr; }
 }

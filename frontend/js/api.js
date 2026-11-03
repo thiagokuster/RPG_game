@@ -33,10 +33,10 @@ const api = {
     });
   },
 
-  startMatch(room, classes, token) {
+  startMatch(room, classes, token, modo) {
     return this.request("/api/start-match", {
       method: "POST",
-      body: JSON.stringify({ room, classes, token }),
+      body: JSON.stringify({ room, classes, token, modo: modo || "pvp" }),
     });
   },
 

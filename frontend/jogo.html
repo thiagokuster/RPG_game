@@ -10,11 +10,15 @@
   <div class="shell">
     <header>
       <h1 id="roomLabel">Sala</h1>
-      <a class="badge" href="/">Voltar ao lobby</a>
+      <div class="row">
+        <button type="button" class="ghost" id="toggle3d">Arena 3D</button>
+        <a class="badge" href="/">Voltar ao lobby</a>
+      </div>
     </header>
     <div class="layout">
       <section class="panel table">
         <div class="turn" id="turnBanner">Conectando...</div>
+        <canvas id="arena3d" hidden></canvas>
         <div class="seats" id="seats"></div>
         <div class="log" id="log"></div>
       </section>
@@ -41,7 +45,9 @@
       </aside>
     </div>
   </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
   <script src="/js/api.js"></script>
+  <script src="/js/arena3d.js"></script>
   <script src="/js/jogo.js"></script>
 </body>
 </html>

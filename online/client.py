@@ -59,10 +59,10 @@ class GameClient:
         print(response)
         return response
 
-    def start_match(self, classes):
+    def start_match(self, classes=None):
         if not self.connected:
             raise RuntimeError("Cliente nao esta conectado.")
-        send_message(self.socket, {"type": "start_match", "room": self.room, "classes": classes})
+        send_message(self.socket, {"type": "start_match", "room": self.room, "classes": classes or {}})
 
     def list_rooms(self):
         if not self.connected:
@@ -148,15 +148,7 @@ class GameClient:
             return payload
 
         if action in {"start", "start_match"}:
-            if len(parts) < 2:
-                raise ValueError("Uso: start Nome:Classe Nome:Classe")
-            classes = {}
-            for part in parts[1:]:
-                if ":" not in part:
-                    raise ValueError("Uso: start Nome:Classe Nome:Classe")
-                nome, classe = part.split(":", 1)
-                classes[nome] = classe
-            return {"action": "start_match", "classes": classes}
+            return {"action": "start_match"}
 
         if action in {"list", "list_rooms"}:
             return {"action": "list_rooms"}
@@ -181,7 +173,7 @@ def main():
     client = GameClient(host=args.host, port=args.port, player=args.player, room=args.room)
     client.connect()
     print(f"Conectado em {args.room} como {args.player}.")
-    print("Comandos: attack, shop, buy, equip, use_magic, start Nome:Classe, list, create, sair")
+    print("Comandos: attack, shop, buy, equip, use_magic, start, list, create, sair")
 
     def receiver():
         client.listen_forever()
@@ -204,7 +196,7 @@ def main():
 
         if payload["action"] == "help":
             print('Comandos: attack <alvo>, shop [refresh], buy <item>, equip <item>, use_magic "Bola de Fogo" <alvo>')
-            print("          start Nome:Classe Nome:Classe, list, create, sair")
+            print("          start, list, create, sair")
             continue
 
         client.send_action(**payload)

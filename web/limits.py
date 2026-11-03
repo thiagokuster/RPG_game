@@ -9,7 +9,6 @@ MAX_PASSWORD = 16
 MAX_BODY = 4096
 MAX_MAGIC = 40
 ALLOWED_ACTIONS = {"attack", "shop", "equip", "use_magic"}
-ALLOWED_CLASSES = {"Guerreiro", "Mago", "Arqueiro", "Paladino", "Clerigo"}
 
 
 def sanitize_name(name):
@@ -48,10 +47,14 @@ def sanitize_magic(name):
     return name
 
 
-def hash_secret(value):
+def new_salt():
+    return secrets.token_hex(8)
+
+
+def hash_secret(value, salt=""):
     if not value:
         return ""
-    return hashlib.sha256(f"arena-rpg|{value}".encode("utf-8")).hexdigest()
+    return hashlib.sha256(f"arena-rpg|{salt}|{value}".encode("utf-8")).hexdigest()
 
 
 def issue_token():

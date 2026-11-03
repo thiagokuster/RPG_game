@@ -102,7 +102,9 @@ class TestLobby(unittest.TestCase):
         room = lobby.create_room("Alice", password="segredo1")
         self.assertTrue(room["protected"])
         self.assertNotIn("password", room)
-        self.assertEqual(lobby.rooms[room["code"]]["password"], hash_secret("segredo1"))
+        salt = lobby.rooms[room["code"]].get("password_salt", "")
+        self.assertTrue(salt)
+        self.assertEqual(lobby.rooms[room["code"]]["password"], hash_secret("segredo1", salt))
         self.assertNotEqual(lobby.rooms[room["code"]]["password"], "segredo1")
 
         with self.assertRaisesRegex(ValueError, "Senha"):
@@ -183,6 +185,20 @@ class TestLobby(unittest.TestCase):
         )
         self.assertEqual(cura.get("type"), "error")
         self.assertEqual(alice.hp, 0)
+
+    def test_coop_adiciona_chefe(self):
+        lobby = Lobby()
+        room = lobby.create_room("Alice")
+        lobby.join_room("Bob", room["code"])
+        started = lobby.start_match(
+            room["code"],
+            {"Alice": "Guerreiro", "Bob": "Mago"},
+            token=lobby.token_of(room["code"], "Alice"),
+            modo="coop",
+        )
+        self.assertEqual(started["modo"], "coop")
+        self.assertEqual(len(started["players"]), 3)
+        self.assertTrue(any(player.get("npc") for player in started["players"]))
 
 
 class TestRateLimiter(unittest.TestCase):

@@ -1,6 +1,7 @@
 from random import choice, randint, uniform
 
 from monstro import Monstro
+from motor.eventos import evento, nome
 
 
 def chance_evento(rodada):
@@ -32,25 +33,21 @@ def escolher_tipo(sorte=0):
 def resolver_tesouro(jogador, rodada):
     ganho = 2 + max(1, rodada // 2) + getattr(jogador, "sorte", 0)
     jogador.moedas += ganho
-    print(f"{jogador.nome} encontrou um tesouro e ganhou {ganho} moedas!")
-    return {"tipo": "tesouro", "moedas": ganho, "resultado": "ganhou"}
+    return evento("tesouro", de=nome(jogador), moedas=ganho, resultado="ganhou")
 
 
 def resolver_risco(jogador, rodada):
     perda = min(jogador.moedas, 1 + rodada // 3)
     salvamento = randint(1, 20) + getattr(jogador, "sorte", 0)
     if perda <= 0 or salvamento >= 12:
-        print(f"{jogador.nome} evitou um golpe de azar.")
-        return {"tipo": "risco", "moedas": 0, "resultado": "evitou", "dado": salvamento}
+        return evento("risco", de=nome(jogador), moedas=0, resultado="evitou", dado=salvamento)
     jogador.moedas -= perda
-    print(f"{jogador.nome} perdeu {perda} moedas num evento de risco.")
-    return {"tipo": "risco", "moedas": perda, "resultado": "perdeu", "dado": salvamento}
+    return evento("risco", de=nome(jogador), moedas=perda, resultado="perdeu", dado=salvamento)
 
 
 def resolver_aposta(jogador, rodada, aposta=None):
     if jogador.moedas <= 0:
-        print(f"{jogador.nome} nao tinha moedas para apostar.")
-        return {"tipo": "aposta", "moedas": 0, "resultado": "sem_moedas"}
+        return evento("aposta", de=nome(jogador), moedas=0, resultado="sem_moedas")
 
     aposta = aposta if aposta is not None else min(jogador.moedas, 2 + rodada // 4)
     aposta = max(1, min(jogador.moedas, int(aposta)))
@@ -60,17 +57,16 @@ def resolver_aposta(jogador, rodada, aposta=None):
     if dado >= 11:
         ganho = max(1, int(aposta * multiplicador))
         jogador.moedas += ganho
-        print(f"{jogador.nome} apostou {aposta} e ganhou {ganho} moedas ({multiplicador:.1f}x).")
-        return {
-            "tipo": "aposta",
-            "resultado": "ganhou",
-            "aposta": aposta,
-            "moedas": ganho,
-            "multiplicador": multiplicador,
-            "dado": dado,
-        }
-    print(f"{jogador.nome} apostou {aposta} e perdeu.")
-    return {"tipo": "aposta", "resultado": "perdeu", "aposta": aposta, "moedas": 0, "dado": dado}
+        return evento(
+            "aposta",
+            de=nome(jogador),
+            resultado="ganhou",
+            aposta=aposta,
+            moedas=ganho,
+            multiplicador=multiplicador,
+            dado=dado,
+        )
+    return evento("aposta", de=nome(jogador), resultado="perdeu", aposta=aposta, moedas=0, dado=dado)
 
 
 def gerar_evento(rodada, jogador=None):
@@ -82,23 +78,22 @@ def gerar_evento(rodada, jogador=None):
     if tipo == "monstro":
         nivel = max(1, (rodada // 2) + 1)
         monstro = Monstro.gerar_monstro(nivel)
-        print(f"Evento aleatorio! Um {monstro.nome} apareceu na rodada {rodada}.")
-        return {"tipo": "monstro", "monstro": monstro}
+        return evento("monstro", nome=monstro.nome, monstro=monstro)
     if tipo == "tesouro":
-        return {"tipo": "tesouro"}
+        return evento("tesouro")
     if tipo == "aposta":
-        return {"tipo": "aposta"}
-    return {"tipo": "risco"}
+        return evento("aposta")
+    return evento("risco")
 
 
-def resolver_evento(jogador, evento, rodada=1):
-    if not evento:
+def resolver_evento(jogador, ev, rodada=1):
+    if not ev:
         return None
-    tipo = evento.get("tipo")
+    tipo = ev.get("tipo")
     if tipo == "tesouro":
         return resolver_tesouro(jogador, rodada)
     if tipo == "aposta":
-        return resolver_aposta(jogador, rodada, evento.get("aposta"))
+        return resolver_aposta(jogador, rodada, ev.get("aposta"))
     if tipo == "risco":
         return resolver_risco(jogador, rodada)
-    return evento
+    return ev

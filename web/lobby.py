@@ -1,15 +1,15 @@
 import random
 from threading import Lock
 
-from combate import resolver_ataque
 from equipamento import Equipamento
 from jogador import Jogador
 from partida import Partida
+from sala.acoes import resolver_jogada, serializar_eventos
 from web.limits import (
     ALLOWED_ACTIONS,
-    ALLOWED_CLASSES,
     hash_secret,
     issue_token,
+    new_salt,
     sanitize_magic,
     sanitize_name,
     sanitize_password,
@@ -36,19 +36,24 @@ class Lobby:
     def _serialize_player(self, player):
         obj = player.get("obj")
         if obj is not None:
+            inventario = getattr(obj, "inventario", []) or []
+            magias = getattr(obj, "magias", []) or []
+            arma = getattr(obj, "arma", None)
+            armadura = getattr(obj, "armadura", None)
             return {
                 "name": obj.nome,
-                "classe": obj.classe,
+                "classe": getattr(obj, "classe", "Aventureiro"),
                 "hp": obj.hp,
-                "max_hp": obj.max_hp,
-                "moedas": obj.moedas,
-                "mana": obj.mana,
-                "max_mana": obj.max_mana,
-                "nivel": obj.nivel,
-                "armor_class": obj.armor_class,
-                "sorte": obj.sorte,
-                "arma": obj.arma.nome if obj.arma else None,
-                "armadura": obj.armadura.nome if obj.armadura else None,
+                "max_hp": getattr(obj, "max_hp", obj.hp),
+                "moedas": getattr(obj, "moedas", 0),
+                "mana": getattr(obj, "mana", 0),
+                "max_mana": getattr(obj, "max_mana", 0),
+                "nivel": getattr(obj, "nivel", 1),
+                "armor_class": getattr(obj, "armor_class", 12),
+                "sorte": getattr(obj, "sorte", 0),
+                "arma": arma.nome if arma else None,
+                "armadura": armadura.nome if armadura else None,
+                "npc": not hasattr(obj, "inventario"),
                 "inventory": [
                     {
                         "nome": item.nome,
@@ -56,13 +61,13 @@ class Lobby:
                         "raridade": getattr(item, "raridade", None),
                         "durabilidade": getattr(item, "durabilidade", 0),
                     }
-                    for item in obj.inventario
+                    for item in inventario
                 ],
-                "magias": [{"nome": magia.nome, "tipo": magia.tipo, "custo": magia.custo} for magia in obj.magias],
+                "magias": [{"nome": magia.nome, "tipo": magia.tipo, "custo": magia.custo} for magia in magias],
             }
         return {
             "name": player["name"],
-            "classe": player.get("classe", "Guerreiro"),
+            "classe": player.get("classe", "Aventureiro"),
             "hp": player.get("hp", 0),
             "max_hp": player.get("max_hp", 0),
             "moedas": 0,
@@ -92,12 +97,14 @@ class Lobby:
             "winner": room.get("winner"),
             "shop": [self._serialize_item(item) for item in room.get("shop", [])],
             "log": list(room.get("log", [])),
+            "eventos": list(room.get("eventos", [])),
             "protected": bool(room.get("password")),
+            "modo": room.get("modo", "pvp"),
         }
 
     @staticmethod
-    def _make_player(name, classe="Guerreiro"):
-        jogador = Jogador.criar_por_classe(name, classe)
+    def _make_player(name, classe=None):
+        jogador = Jogador.criar(name)
         return {
             "name": jogador.nome,
             "classe": jogador.classe,
@@ -151,6 +158,7 @@ class Lobby:
                     return self._attach_session(self._room_snapshot(code), room, name)
 
             code = self._generate_code_for_lobby(self.rooms)
+            salt = new_salt()
             room = {
                 "code": code,
                 "players": [self._make_player(name)],
@@ -159,10 +167,13 @@ class Lobby:
                 "winner": None,
                 "turn_order": [name],
                 "match": None,
-                "password": hash_secret(senha) or None,
+                "password_salt": salt,
+                "password": hash_secret(senha, salt) or None,
                 "tokens": {},
                 "rodada": 1,
                 "log": [{"text": f"{name} criou a sala."}],
+                "eventos": [],
+                "modo": "pvp",
             }
             self._issue_player_token(room, name)
             self.rooms[code] = room
@@ -177,7 +188,7 @@ class Lobby:
             room = self.rooms.get(room_name)
             if room is None:
                 raise KeyError(f"Sala {room_name} não encontrada.")
-            if room.get("password") and room["password"] != hash_secret(senha):
+            if room.get("password") and room["password"] != hash_secret(senha, room.get("password_salt", "")):
                 raise ValueError("Senha da sala inválida.")
             if room.get("status") == "started" and room.get("match") is not None:
                 raise ValueError("A partida já foi iniciada. Não é possível entrar na sala durante o jogo.")
@@ -192,7 +203,7 @@ class Lobby:
             self._append_log(room, f"{name} entrou na sala.")
             return self._attach_session(self._room_snapshot(room_name), room, name)
 
-    def start_match(self, room_code, classes=None, token=None):
+    def start_match(self, room_code, classes=None, token=None, modo="pvp"):
         room_name = sanitize_room(room_code)
         with self._lock:
             room = self.rooms.get(room_name)
@@ -209,24 +220,23 @@ class Lobby:
             if len(player_names) < 2:
                 raise ValueError("É necessário pelo menos dois jogadores para iniciar a partida.")
 
-            selected_classes = classes or {}
-            unknown_players = [name for name in player_names if name not in selected_classes]
-            if unknown_players:
-                raise ValueError("Defina uma classe para todos os jogadores antes de iniciar.")
-            invalid_classes = [classe for classe in selected_classes.values() if classe not in ALLOWED_CLASSES]
-            if invalid_classes:
-                raise ValueError("Classe inválida.")
+            jogadores = [Jogador.criar(nome) for nome in player_names]
+            modo_sala = "coop" if str(modo).lower() == "coop" else "pvp"
+            if modo_sala == "coop":
+                from monstro import Monstro
 
-            jogadores = [Jogador.criar_por_classe(nome, selected_classes[nome]) for nome in player_names]
-            partida = Partida(jogadores)
+                jogadores.append(Monstro.gerar_chefe(1))
+            partida = Partida(jogadores, modo=modo_sala)
 
             room["match"] = partida
+            room["modo"] = modo_sala
             room["shop"] = Equipamento.gerar_estoque(1, 3)
             room["status"] = "started"
-            room["turn_order"] = player_names
+            room["turn_order"] = [jogador.nome for jogador in jogadores]
             room["current_turn"] = player_names[0]
             room["rodada"] = 1
             room["winner"] = None
+            room["eventos"] = []
             room["players"] = [
                 {"name": jogador.nome, "classe": jogador.classe, "hp": jogador.hp, "max_hp": jogador.max_hp, "obj": jogador}
                 for jogador in partida.jogadores
@@ -274,7 +284,8 @@ class Lobby:
         atual = next((jogador for jogador in jogadores if jogador.nome == room.get("current_turn")), None)
         if atual is None:
             room["current_turn"] = vivos[0].nome
-            vivos[0].iniciar_turno()
+            if hasattr(vivos[0], "iniciar_turno"):
+                vivos[0].iniciar_turno()
             return room["current_turn"]
 
         indice = jogadores.index(atual)
@@ -282,13 +293,38 @@ class Lobby:
             candidato = jogadores[(indice + passo) % len(jogadores)]
             if candidato.hp > 0:
                 room["current_turn"] = candidato.nome
-                candidato.iniciar_turno()
+                if hasattr(candidato, "iniciar_turno"):
+                    candidato.iniciar_turno()
                 if jogadores.index(candidato) <= indice:
                     match.iniciar_rodada()
                     room["rodada"] = room.get("rodada", 1) + 1
                 return candidato.nome
         room["current_turn"] = None
         return None
+
+    def _eh_npc(self, jogador):
+        return not hasattr(jogador, "inventario")
+
+    def _resolver_turno_npc(self, room, match):
+        atual = next((jogador for jogador in match.jogadores if jogador.nome == room.get("current_turn")), None)
+        while atual is not None and self._eh_npc(atual) and room.get("status") == "started":
+            alvos = [jogador for jogador in match.jogadores if not self._eh_npc(jogador) and jogador.hp > 0]
+            if not alvos:
+                break
+            resultado = atual.atacar(alvos[0])
+            eventos = serializar_eventos(resultado.get("eventos") if isinstance(resultado, dict) else [resultado])
+            room["eventos"] = list(room.get("eventos") or []) + eventos
+            for ev in eventos:
+                if ev.get("texto"):
+                    self._append_log(room, ev["texto"])
+            match.verificar_mortos()
+            if match.fim_partida():
+                room["status"] = "finished"
+                room["winner"] = match.resultado_fim().get("vencedor") or "nenhum"
+                room["current_turn"] = None
+                return
+            self._next_turn(room, match)
+            atual = next((jogador for jogador in match.jogadores if jogador.nome == room.get("current_turn")), None)
 
     def _sync_players(self, room, match):
         room["players"] = [
@@ -297,19 +333,10 @@ class Lobby:
         ]
 
     def _log_action(self, room, result):
-        player = result.get("player")
-        if result.get("result") == "miss":
-            self._append_log(room, f"{player} errou o ataque em {result.get('target')}.")
-        elif result.get("result") == "hit":
-            self._append_log(room, f"{player} atacou {result.get('target')} e causou {result.get('damage', 0)} de dano.")
-        elif result.get("type") == "magic":
-            self._append_log(room, f"{player} lançou {result.get('magic')} em {result.get('target')}.")
-        elif result.get("type") == "shop" and result.get("result") == "purchase":
-            self._append_log(room, f"{player} comprou {result.get('item')}.")
-        elif result.get("type") == "shop":
-            self._append_log(room, f"{player} atualizou a loja.")
-        elif result.get("type") == "inventory":
-            self._append_log(room, f"{player} equipou {result.get('item')}.")
+        for ev in result.get("eventos") or []:
+            texto = ev.get("texto") or ev.get("motivo")
+            if texto:
+                self._append_log(room, texto)
         if result.get("status") == "finished":
             winner = result.get("winner")
             if winner and winner != "nenhum":
@@ -330,13 +357,14 @@ class Lobby:
             result["next_turn"] = None
         else:
             atacante = next((j for j in match.jogadores if j.nome == result.get("player")), None)
-            if result.get("type") == "magic" and atacante is not None and not getattr(atacante, "gasta_turno", True):
+            if atacante is not None and not getattr(atacante, "gasta_turno", True):
                 atacante.gasta_turno = True
                 result["next_turn"] = atacante.nome
                 result["extra"] = True
                 room["current_turn"] = atacante.nome
             else:
                 result["next_turn"] = self._next_turn(room, match)
+                self._resolver_turno_npc(room, match)
             result["status"] = room["status"]
         result["current_turn"] = room.get("current_turn")
         result["room"] = room_name
@@ -364,82 +392,42 @@ class Lobby:
             if atacante is None:
                 return {"error": "Jogador não encontrado na partida.", "current_turn": room["current_turn"]}
 
-            if action == "attack":
-                alvo_nome = target or next((j.nome for j in match.jogadores if j.nome != player and j.hp > 0), None)
-                alvo = next((j for j in match.jogadores if j.nome == alvo_nome), None)
-                if alvo is None or alvo.hp <= 0:
-                    return {"error": "Alvo inválido.", "current_turn": room["current_turn"]}
-                resultado = resolver_ataque(atacante, alvo)
-                if resultado["acertou"]:
-                    Partida.ganhar_moeda(atacante, room.get("rodada", 1), silencioso=True)
-                    atacante.ganhar_experiencia(25)
-                return self._concluir(room, room_name, {
-                    "player": player,
-                    "target": alvo.nome,
-                    "result": "hit" if resultado["acertou"] else "miss",
-                    "damage": resultado["dano"],
-                })
-
-            if action == "shop":
-                if action_type == "refresh":
-                    if atacante.moedas < 5:
-                        return {"error": "Moedas insuficientes.", "current_turn": room["current_turn"]}
-                    atacante.moedas -= 5
-                    nivel = match.jogadores[0].nivel if match.jogadores else 1
-                    room["shop"] = Equipamento.gerar_estoque(nivel, 3)
-                    return self._concluir(room, room_name, {
-                        "type": "shop",
-                        "player": player,
-                        "items": [self._serialize_item(item) for item in room["shop"]],
-                    })
-                if item_index is None or not isinstance(item_index, int):
-                    return {"type": "error", "message": "Item inválido."}
-                if not 0 <= item_index < len(room.get("shop", [])):
-                    return {"type": "error", "message": "Item inválido."}
-                item = room["shop"][item_index]
-                if atacante.moedas < item.valor:
-                    return {"type": "error", "message": "Moedas insuficientes."}
-                atacante.moedas -= item.valor
-                atacante.adicionar_item_inventario(item)
-                del room["shop"][item_index]
-                return self._concluir(room, room_name, {
-                    "type": "shop",
-                    "player": player,
-                    "result": "purchase",
-                    "item": item.nome,
-                    "inventory": [item.nome for item in atacante.inventario],
-                })
-
-            if action == "equip":
-                if item_index is None or not isinstance(item_index, int) or not 0 <= item_index < len(atacante.inventario):
-                    return {"type": "error", "message": "Item inválido."}
-                item = atacante.inventario[item_index]
-                atacante.equipar(item)
-                return self._concluir(room, room_name, {
-                    "type": "inventory",
-                    "player": atacante.nome,
-                    "result": "equip",
-                    "item": item.nome,
-                })
-
-            if action == "use_magic":
-                alvo = next((j for j in match.jogadores if j.nome == target), None)
-                magia = next((m for m in atacante.magias if m.nome.lower() == sanitize_magic(magic).lower()), None)
-                if alvo is None or magia is None:
-                    return {"type": "error", "message": "Magia inválida."}
-                if magia.tipo == "cura" and alvo.hp <= 0:
-                    return {"type": "error", "message": "Não é possível curar um jogador eliminado."}
-                if magia.tipo == "dano" and alvo.hp <= 0:
-                    return {"type": "error", "message": "O alvo já está morto."}
-                if not atacante.usar_magia(magia.nome, alvo):
-                    return {"type": "error", "message": "Magia indisponível."}
-                return self._concluir(room, room_name, {
-                    "type": "magic",
-                    "player": atacante.nome,
-                    "target": alvo.nome,
-                    "magic": magia.nome,
-                    "target_hp": alvo.hp,
-                })
+            jogada = resolver_jogada(
+                match,
+                atacante,
+                action,
+                alvo_nome=target,
+                magia=sanitize_magic(magic) if magic else None,
+                item_index=item_index,
+                action_type=action_type,
+                shop=room.get("shop", []),
+                rodada=room.get("rodada", 1),
+            )
+            if not jogada.get("ok"):
+                return {
+                    "error": jogada.get("erro") or "Ação inválida.",
+                    "type": "error",
+                    "message": jogada.get("erro") or "Ação inválida.",
+                    "current_turn": room["current_turn"],
+                }
+            if "shop" in jogada:
+                room["shop"] = jogada["shop"]
+            eventos = serializar_eventos(jogada.get("eventos"))
+            room["eventos"] = eventos
+            payload = {
+                "player": player,
+                "target": jogada.get("target") or target,
+                "result": jogada.get("result"),
+                "damage": jogada.get("damage", 0),
+                "critico": jogada.get("critico", False),
+                "type": jogada.get("type"),
+                "magic": jogada.get("magic"),
+                "item": jogada.get("item"),
+                "eventos": eventos,
+                "items": [self._serialize_item(item) for item in room.get("shop", [])],
+                "inventory": [item.nome for item in atacante.inventario],
+            }
+            return self._concluir(room, room_name, payload)
 
             return {"error": "Ação indisponível neste lobby.", "current_turn": room["current_turn"]}
 

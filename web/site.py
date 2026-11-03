@@ -161,6 +161,7 @@ class LobbyRequestHandler(BaseHTTPRequestHandler):
                     payload.get("room", ""),
                     payload.get("classes", {}),
                     token=payload.get("token"),
+                    modo=payload.get("modo", "pvp"),
                 )
                 self._send_json(result)
                 self._publish(result.get("code"))

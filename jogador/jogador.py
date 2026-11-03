@@ -1,35 +1,22 @@
 from random import randint
-from time import sleep
 
 from equipamento import Equipamento
 from magia import Magia
+from motor.eventos import evento, nome
 
 
 class Jogador:
-    CLASSES = {
-        "Guerreiro": {
-            "hp": 100, "ataque_bonus": 2, "dano_bonus": 2, "armor_class": 14, "mana": 0, "sorte": 2,
-            "magias": [], "reducao_nativa": 1, "critico": 19, "kit": "arma",
-        },
-        "Mago": {
-            "hp": 100, "ataque_bonus": 2, "dano_bonus": 2, "armor_class": 14, "mana": 6, "sorte": 2,
-            "magias": [Magia.bola_de_fogo(), Magia.cura_leve()], "mana_por_rodada": 1, "kit": "anel_mana",
-        },
-        "Arqueiro": {
-            "hp": 100, "ataque_bonus": 2, "dano_bonus": 2, "armor_class": 14, "mana": 0, "sorte": 2,
-            "magias": [], "bonus_acerto": 1, "kit": "anel_sorte",
-        },
-        "Paladino": {
-            "hp": 100, "ataque_bonus": 2, "dano_bonus": 2, "armor_class": 14, "mana": 4, "sorte": 2,
-            "magias": [Magia.cura_leve()], "cura_fator": 0.5, "cura_e_ataque": True,
-        },
-        "Clerigo": {
-            "hp": 100, "ataque_bonus": 2, "dano_bonus": 2, "armor_class": 14, "mana": 5, "sorte": 2,
-            "magias": [Magia.cura_leve(), Magia.rajada_congelante()], "rajada_extra_se_ferido": True,
-        },
+    BASE = {
+        "hp": 100,
+        "ataque_bonus": 2,
+        "dano_bonus": 2,
+        "armor_class": 14,
+        "mana": 4,
+        "sorte": 2,
+        "kit": "arma",
     }
 
-    def __init__(self, nome, hp, classe="Guerreiro", nivel=1):
+    def __init__(self, nome, hp=100, classe="Aventureiro", nivel=1):
         self.nome = nome
         self.hp = hp
         self.max_hp = hp
@@ -56,25 +43,32 @@ class Jogador:
         self.cura_fator = 1
         self.cura_e_ataque = False
         self.rajada_extra_se_ferido = False
+        self.tiro_multiplo = False
         self.kit = None
         self.gasta_turno = True
         self.extra_disponivel = True
+        self.usou_folego = False
         self.arma: Equipamento = None
         self.anel = None
         self.armadura = None
-        self.aplicar_classe(classe)
+        self.aplicar_base()
 
     @classmethod
-    def criar_por_classe(cls, nome, classe, nivel=1):
-        config = cls.CLASSES.get(classe, cls.CLASSES["Guerreiro"])
-        jogador = cls(nome=nome, hp=config["hp"], classe=classe, nivel=nivel)
-        jogador.magias = list(config["magias"])
+    def criar(cls, nome, nivel=1):
+        jogador = cls(nome=nome, hp=cls.BASE["hp"], classe="Aventureiro", nivel=nivel)
         jogador.aplicar_kit()
         return jogador
 
-    def aplicar_classe(self, classe):
-        config = self.CLASSES.get(classe, self.CLASSES["Guerreiro"])
-        self.classe = classe
+    @classmethod
+    def criar_por_classe(cls, nome, classe=None, nivel=1):
+        return cls.criar(nome, nivel=nivel)
+
+    def aplicar_classe(self, classe=None):
+        self.aplicar_base()
+
+    def aplicar_base(self):
+        config = self.BASE
+        self.classe = "Aventureiro"
         self.max_hp = config["hp"]
         self.hp = self.max_hp
         self.ataque_bonus = config["ataque_bonus"]
@@ -83,17 +77,19 @@ class Jogador:
         self.max_mana = config.get("mana", 0)
         self.mana = self.max_mana
         self.sorte = config.get("sorte", 2)
-        self.magias = list(config["magias"])
-        self.reducao_nativa = config.get("reducao_nativa", 0)
-        self.critico = config.get("critico", 20)
-        self.bonus_acerto = config.get("bonus_acerto", 0)
-        self.mana_por_rodada = config.get("mana_por_rodada", 0)
-        self.cura_fator = config.get("cura_fator", 1)
-        self.cura_e_ataque = config.get("cura_e_ataque", False)
-        self.rajada_extra_se_ferido = config.get("rajada_extra_se_ferido", False)
+        self.magias = [Magia.bola_de_fogo(), Magia.cura_leve(), Magia.rajada_congelante()]
+        self.reducao_nativa = 0
+        self.critico = 20
+        self.bonus_acerto = 0
+        self.mana_por_rodada = 0
+        self.cura_fator = 1
+        self.cura_e_ataque = False
+        self.rajada_extra_se_ferido = False
+        self.tiro_multiplo = False
         self.kit = config.get("kit")
         self.gasta_turno = True
         self.extra_disponivel = True
+        self.usou_folego = False
 
     def aplicar_kit(self):
         if self.kit == "arma":
@@ -122,6 +118,7 @@ class Jogador:
 
     def ganhar_experiencia(self, xp):
         self.experiencia += xp
+        eventos = []
         while self.experiencia >= self.proximo_nivel:
             self.experiencia -= self.proximo_nivel
             self.nivel += 1
@@ -134,52 +131,34 @@ class Jogador:
             if self.max_mana > 0:
                 self.max_mana += 1
             self.mana = self.max_mana
-            print(f"{self.nome} subiu para o nivel {self.nivel}!")
+            eventos.append(evento("nivel", de=self.nome, nivel=self.nivel))
+        return eventos
 
     def d10(self):
-        print("Rolando dado de ataque...")
-        sleep(0.5)
-        resultado = randint(1, 10)
-        print(resultado)
-        return resultado
+        return randint(1, 10)
 
     def d20(self):
-        print("Rolando dado de agilidade...")
-        sleep(0.5)
-        resultado = randint(1, 20)
-        print(resultado)
-        return resultado
+        return randint(1, 20)
 
     def danotot(self, d10, d20):
         danotot = d10
         if self.danobase > 0:
-            print(f"+ {self.danobase} de bonus")
             danotot += self.danobase
         if self.arma and self.arma.dano > 0:
             danotot += self.arma.dano
-            print(f"+ {self.arma.dano}")
         if self.dano_bonus > 0:
             danotot += self.dano_bonus
-            print(f"+ {self.dano_bonus} de dano da classe")
         if d20 >= getattr(self, "critico", 20):
-            print("CRITICO! Dano dobrado.")
-            sleep(0.3)
             danotot *= 2
         return danotot
 
     def usar_magia(self, nome_magia, alvo):
         magia = next((m for m in self.magias if m.nome.lower() == nome_magia.lower()), None)
-        if magia is None:
-            print(f"{self.nome} nao conhece {nome_magia}.")
+        if magia is None or self.hp <= 0 or alvo is None:
             return False
-        if self.hp <= 0:
-            print(f"{self.nome} nao pode conjurar, pois esta morto.")
-            return False
-        if alvo is None:
-            print("Alvo invalido.")
+        if magia.nome == "Segundo Folego" and self.usou_folego:
             return False
         if self.mana < magia.custo:
-            print(f"{self.nome} nao tem mana suficiente para {magia.nome} (custo {magia.custo}, mana {self.mana}).")
             return False
 
         self.mana -= magia.custo
@@ -187,7 +166,6 @@ class Jogador:
         if magia.tipo == "dano":
             if getattr(alvo, "hp", 0) <= 0:
                 self.mana += magia.custo
-                print("O alvo ja esta morto.")
                 return False
             ferido = getattr(alvo, "max_hp", 0) > 0 and alvo.hp < alvo.max_hp
             bruto = magia.dano + self.dano_bonus
@@ -200,74 +178,53 @@ class Jogador:
             if self.rajada_extra_se_ferido and ferido and self.extra_disponivel:
                 self.gasta_turno = False
                 self.extra_disponivel = False
-            print(f"{self.nome} conjurou {magia.nome} e causou {dano} de dano em {alvo.nome}.")
-            return True
+            eventos = [evento("magia", de=self.nome, para=nome(alvo), magia=magia.nome, dano=dano, cura=0, critico=False)]
+            if getattr(alvo, "hp", 0) <= 0:
+                eventos.append(evento("morte", de=nome(alvo)))
+            return evento("magia", de=self.nome, para=nome(alvo), magia=magia.nome, dano=dano, cura=0, ok=True, eventos=eventos)
         if magia.tipo == "cura":
             if getattr(alvo, "hp", 0) <= 0:
                 self.mana += magia.custo
-                print("O alvo ja esta morto.")
                 return False
             cura = int((magia.cura + self.dano_bonus) * getattr(self, "cura_fator", 1))
             alvo.hp = min(alvo.max_hp, alvo.hp + cura)
+            if magia.nome == "Segundo Folego":
+                self.usou_folego = True
             if self.cura_e_ataque and self.extra_disponivel:
                 self.gasta_turno = False
                 self.extra_disponivel = False
-            print(f"{self.nome} usou {magia.nome} e recuperou {cura} de HP de {alvo.nome}.")
-            return True
+            return evento(
+                "magia",
+                de=self.nome,
+                para=nome(alvo),
+                magia=magia.nome,
+                dano=0,
+                cura=cura,
+                ok=True,
+                eventos=[evento("magia", de=self.nome, para=nome(alvo), magia=magia.nome, dano=0, cura=cura)],
+            )
         self.mana += magia.custo
         return False
 
     def adicionar_item_inventario(self, item):
-        print(f"{item.nome} foi adicionado no inventario")
         self.inventario.append(item)
+        return evento("item", de=self.nome, item=item.nome)
 
-    def mostrar_inventario(self):
-        if not self.inventario:
-            print("Inventario vazio")
-            return
-
-        fim = len(self.inventario)
-        while True:
-            from partida import Partida
-            print("=== INVENTARIO ===")
-            for i, item in enumerate(self.inventario):
-                detalhes = []
-                if getattr(item, 'dano', 0):
-                    detalhes.append(f"dano {item.dano}")
-                if getattr(item, 'agilidade', 0):
-                    detalhes.append(f"agilidade {item.agilidade}")
-                if getattr(item, 'armadura', 0):
-                    detalhes.append(f"CA +{item.armadura}")
-                if getattr(item, "reducao", 0):
-                    detalhes.append(f"redução {item.reducao}")
-                if getattr(item, "durabilidade", 0):
-                    detalhes.append(f"durabilidade {item.durabilidade}/{getattr(item, 'max_durabilidade', item.durabilidade)}")
-                if getattr(item, 'bonus_ataque', 0):
-                    detalhes.append(f"+{item.bonus_ataque} ataque")
-                print(f"-[{i}] {item.nome} | {item.tipo} | {' | '.join(detalhes) if detalhes else 'sem bonus'}")
-            print(f"-[{fim}] Saida")
-            if self.arma:
-                print(f"Arma equipada : {self.arma.nome}")
-            if self.anel:
-                print(f"Anel equipado : {self.anel.nome}")
-            if self.armadura:
-                print(
-                    f"Armadura equipada : {self.armadura.nome} "
-                    f"(redução {getattr(self.armadura, 'reducao', 0)}, "
-                    f"durabilidade {getattr(self.armadura, 'durabilidade', 0)})"
-                )
-            if self.magias:
-                print("Magias: " + ", ".join(m.nome for m in self.magias))
-
-            opc = Partida.validar_opc(list(range(fim + 1)), "Escolha um item do inventario: ")
-            if opc is None or opc == fim:
-                return
-            item = self.inventario[opc]
-            if item.tipo in ["arma", "anel", "armadura"]:
-                self.equipar(item)
-            else:
-                print(f"{item.nome} nao pode ser equipado")
-            break
+    def detalhes_item(self, item):
+        detalhes = []
+        if getattr(item, "dano", 0):
+            detalhes.append(f"dano {item.dano}")
+        if getattr(item, "agilidade", 0):
+            detalhes.append(f"agilidade {item.agilidade}")
+        if getattr(item, "armadura", 0):
+            detalhes.append(f"CA +{item.armadura}")
+        if getattr(item, "reducao", 0):
+            detalhes.append(f"redução {item.reducao}")
+        if getattr(item, "durabilidade", 0):
+            detalhes.append(f"durabilidade {item.durabilidade}/{getattr(item, 'max_durabilidade', item.durabilidade)}")
+        if getattr(item, "bonus_ataque", 0):
+            detalhes.append(f"+{item.bonus_ataque} ataque")
+        return detalhes
 
     def _desaplicar_item(self, item):
         if item is None:
@@ -286,32 +243,25 @@ class Jogador:
 
     def equipar(self, item):
         if item not in self.inventario:
-            print(f"{item.nome} nao esta no inventario")
             return False
         if item.tipo == "arma":
             if self.arma is item:
-                print(f"{item.nome} ja esta equipada")
                 return True
             if self.arma:
-                print(f"Desequipando {self.arma.nome}")
                 self._desaplicar_item(self.arma)
             self.arma = item
             self.ataque_bonus += getattr(item, "bonus_ataque", 0)
         elif item.tipo == "armadura":
             if self.armadura is item:
-                print(f"{item.nome} ja esta equipada")
                 return True
             if self.armadura:
-                print(f"Desequipando {self.armadura.nome}")
                 self._desaplicar_item(self.armadura)
             self.armadura = item
             self.armor_class += getattr(item, "armadura", 0)
         elif item.tipo == "anel":
             if self.anel is item:
-                print(f"{item.nome} ja esta equipado")
                 return True
             if self.anel:
-                print(f"Desequipando {self.anel.nome}")
                 self._desaplicar_item(self.anel)
             self.anel = item
             bonus = getattr(item, "agilidade", 0)
@@ -321,16 +271,13 @@ class Jogador:
             self.max_mana += getattr(item, "bonus_mana", 0)
             self.mana += getattr(item, "bonus_mana", 0)
         else:
-            print(f"{item.nome} nao pode ser equipado")
             return False
-        print(f"{self.nome} equipou {item.nome}")
         return True
 
     def _quebrar_armadura(self):
         item = self.armadura
         if item is None:
             return
-        print(f"A armadura {item.nome} de {self.nome} quebrou!")
         self._desaplicar_item(item)
         self.armadura = None
         if item in self.inventario:

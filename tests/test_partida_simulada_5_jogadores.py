@@ -15,11 +15,22 @@ from partida import Partida
 from web.lobby import Lobby
 
 
+class _Nada:
+    def start(self):
+        return self
+
+    def stop(self):
+        return None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
 def silenciar_sleep():
-    return patch.multiple(
-        "jogador.jogador",
-        sleep=lambda *_a, **_k: None,
-    )
+    return _Nada()
 
 
 class SequenciaDados:
@@ -60,15 +71,15 @@ class TestPartidaSimulada5Jogadores(unittest.TestCase):
     def registrar(self, mensagem):
         self.log.append(mensagem)
 
-    def test_partida_completa_com_cinco_classes_e_todas_as_acoes(self):
+    def test_partida_completa_com_cinco_jogadores_e_todas_as_acoes(self):
         ana, bruno, carla, diego, eva = self.jogadores
         partida = self.partida
 
-        self.assertEqual([j.classe for j in self.jogadores], ["Guerreiro", "Mago", "Arqueiro", "Paladino", "Clerigo"])
-        self.assertEqual(ana.max_mana, 0)
-        self.assertEqual(bruno.max_mana, 7)
+        self.assertEqual([j.classe for j in self.jogadores], ["Aventureiro"] * 5)
+        self.assertEqual(ana.max_mana, 4)
+        self.assertEqual(bruno.max_mana, 4)
         self.assertEqual(diego.max_mana, 4)
-        self.assertEqual(eva.max_mana, 5)
+        self.assertEqual(eva.max_mana, 4)
         self.assertEqual(len(self.loja.estoque), 3)
         self.assertEqual(partida.proximo_vivo(ana), bruno)
         self.registrar("Partida iniciada com 5 jogadores. Loja ja tem estoque.")
@@ -84,8 +95,8 @@ class TestPartidaSimulada5Jogadores(unittest.TestCase):
 
         hp_ana = ana.hp
         self.assertTrue(bruno.usar_magia("Bola de Fogo", ana))
-        self.assertEqual(bruno.mana, 5)
-        self.assertEqual(ana.hp, hp_ana - 19)
+        self.assertEqual(bruno.mana, 2)
+        self.assertEqual(ana.hp, hp_ana - 20)
         self.assertEqual(partida.proximo_vivo(bruno), carla)
         self.registrar("Bruno lancou Bola de Fogo em Ana (20 dano, 2 mana).")
 
@@ -108,15 +119,15 @@ class TestPartidaSimulada5Jogadores(unittest.TestCase):
         carla.adicionar_item_inventario(armadura)
         self.loja.estoque.remove(armadura)
 
-        base_ataque = carla.ataque_bonus
+        nativo_ataque = Jogador.BASE["ataque_bonus"]
         base_ca = carla.armor_class
         carla.equipar(arma1)
-        self.assertEqual(carla.ataque_bonus, base_ataque + 2)
+        self.assertEqual(carla.ataque_bonus, nativo_ataque + 2)
         carla.equipar(arma2)
-        self.assertEqual(carla.ataque_bonus, base_ataque + 2)
+        self.assertEqual(carla.ataque_bonus, nativo_ataque + 2)
         self.assertEqual(carla.arma.nome, "Machado")
         carla.equipar(arma2)
-        self.assertEqual(carla.ataque_bonus, base_ataque + 2)
+        self.assertEqual(carla.ataque_bonus, nativo_ataque + 2)
         carla.equipar(armadura)
         self.assertEqual(carla.armor_class, base_ca + 3)
         carla.equipar(anel)
@@ -128,7 +139,7 @@ class TestPartidaSimulada5Jogadores(unittest.TestCase):
         ana.hp = 40
         hp_diego = diego.hp
         self.assertTrue(diego.usar_magia("Cura Leve", ana))
-        self.assertEqual(ana.hp, 48)
+        self.assertEqual(ana.hp, 57)
         self.assertEqual(diego.hp, hp_diego)
         self.assertEqual(diego.mana, 3)
         self.registrar("Diego curou Ana, nao a si mesmo.")
@@ -136,7 +147,7 @@ class TestPartidaSimulada5Jogadores(unittest.TestCase):
         hp_bruno = bruno.hp
         self.assertTrue(eva.usar_magia("Rajada Congelante", bruno))
         self.assertEqual(bruno.hp, hp_bruno - 14)
-        self.assertEqual(eva.mana, 3)
+        self.assertEqual(eva.mana, 2)
         self.registrar("Eva acertou Rajada Congelante em Bruno.")
 
         dados = SequenciaDados(d20s=[20], d10s=[5])
@@ -203,14 +214,7 @@ class TestPartidaSimulada5Jogadores(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "já existe"):
             lobby.join_room("Ana", codigo)
 
-        classes = {
-            "Ana": "Guerreiro",
-            "Bruno": "Mago",
-            "Carla": "Arqueiro",
-            "Diego": "Paladino",
-            "Eva": "Clerigo",
-        }
-        lobby.start_match(codigo, classes, token=lobby.token_of(codigo, "Ana"))
+        lobby.start_match(codigo, token=lobby.token_of(codigo, "Ana"))
         with self.assertRaisesRegex(ValueError, "já foi iniciada"):
             lobby.join_room("Felix", codigo)
 
@@ -219,15 +223,15 @@ class TestPartidaSimulada5Jogadores(unittest.TestCase):
         self.assertTrue(bruno["magias"])
         self.assertTrue(estado["shop"])
 
-        with patch("jogador.jogador.sleep", lambda *_a, **_k: None):
-            with patch.object(lobby.rooms[codigo]["match"].jogadores[0], "d20", return_value=1):
-                resultado = lobby.perform_action(codigo, "Ana", "attack", "Bruno", token=lobby.token_of(codigo, "Ana"))
+        with patch.object(lobby.rooms[codigo]["match"].jogadores[0], "d20", return_value=1):
+            resultado = lobby.perform_action(codigo, "Ana", "attack", "Bruno", token=lobby.token_of(codigo, "Ana"))
         self.assertEqual(resultado["next_turn"], "Bruno")
 
         resultado = lobby.perform_action(codigo, "Bruno", "use_magic", target="Ana", magic="Bola de Fogo", token=lobby.token_of(codigo, "Bruno"))
         self.assertEqual(resultado["type"], "magic")
         self.assertEqual(resultado["next_turn"], "Carla")
-        self.assertLess(lobby.rooms[codigo]["match"].jogadores[0].hp, 100)
+        ana = lobby.rooms[codigo]["match"].jogadores[0]
+        self.assertLess(ana.hp, ana.max_hp)
 
         snapshot = lobby.get_room(codigo)["room"]
         ana = next(player for player in snapshot["players"] if player["name"] == "Ana")
@@ -267,8 +271,7 @@ class TestPartidaSimulada5Jogadores(unittest.TestCase):
                 payload = receive_message(ana_peer)
                 self.assertEqual(payload["message"], "A partida ainda nao foi iniciada.")
 
-                classes = dict(zip(nomes, ["Guerreiro", "Mago", "Arqueiro", "Paladino", "Clerigo"]))
-                server._handle_message(ana_conn, {"type": "start_match", "room": "Arena", "classes": classes})
+                server._handle_message(ana_conn, {"type": "start_match", "room": "Arena"})
                 for _, peer in pares[:5]:
                     drenar(peer)
                 extra_peer.settimeout(0.5)

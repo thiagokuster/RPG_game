@@ -7,9 +7,9 @@ from partida.partida import Partida
 
 
 class TestSistemaAvancado(unittest.TestCase):
-    def test_jogador_criado_com_classe_mago(self):
-        jogador = Jogador.criar_por_classe("Merlin", "Mago")
-        self.assertEqual(jogador.classe, "Mago")
+    def test_jogador_criado_como_aventureiro(self):
+        jogador = Jogador.criar("Merlin")
+        self.assertEqual(jogador.classe, "Aventureiro")
         self.assertGreaterEqual(jogador.armor_class, 10)
         self.assertTrue(jogador.magias)
 

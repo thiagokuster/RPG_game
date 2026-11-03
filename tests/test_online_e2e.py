@@ -29,11 +29,8 @@ class TestOnlineE2E(unittest.TestCase):
         self.assertTrue(self.ready.wait(timeout=3), "Servidor online nao subiu a tempo.")
         self.host = "127.0.0.1"
         self.port = self.server.port
-        self.sleep_patch = patch("jogador.jogador.sleep", lambda *_a, **_k: None)
-        self.sleep_patch.start()
 
     def tearDown(self):
-        self.sleep_patch.stop()
         for client in self.clients:
             client.close()
 
@@ -84,7 +81,7 @@ class TestOnlineE2E(unittest.TestCase):
         self.assertEqual(erro_nome["type"], "error")
         self.assertIn("já existe", erro_nome["message"])
 
-        ana.start_match({"Ana": "Guerreiro", "Bruno": "Mago"})
+        ana.start_match()
         inicio_ana = self.receber_tipo(ana, "match_started")
         inicio_bruno = self.receber_tipo(bruno, "match_started")
         self.assertEqual(inicio_ana["status"], "started")
@@ -125,16 +122,16 @@ class TestOnlineE2E(unittest.TestCase):
         convite = self.receber_tipo(ana, "player_joined")
         self.assertIn("Bruno", convite["players"])
 
-        ana.start_match({"Ana": "Arqueiro", "Bruno": "Clerigo"})
+        ana.start_match()
         inicio = self.receber_tipo(ana, "match_started")
         self.receber_tipo(bruno, "match_started")
-        self.assertEqual(inicio["match"]["players"][0]["classe"], "Arqueiro")
-        self.assertEqual(inicio["match"]["players"][1]["classe"], "Clerigo")
+        self.assertEqual(inicio["match"]["players"][0]["classe"], "Aventureiro")
+        self.assertEqual(inicio["match"]["players"][1]["classe"], "Aventureiro")
 
     def test_parse_comandos_de_sala(self):
         self.assertEqual(
-            GameClient.parse_command("start Ana:Guerreiro Bruno:Mago"),
-            {"action": "start_match", "classes": {"Ana": "Guerreiro", "Bruno": "Mago"}},
+            GameClient.parse_command("start"),
+            {"action": "start_match"},
         )
         self.assertEqual(GameClient.parse_command("list"), {"action": "list_rooms"})
         self.assertEqual(GameClient.parse_command("create"), {"action": "create_room"})

@@ -4,7 +4,6 @@ import unittest
 import urllib.error
 import urllib.request
 from http.server import ThreadingHTTPServer
-from unittest.mock import patch
 
 from combate import resolver_ataque
 from jogador import Jogador
@@ -14,11 +13,16 @@ from web.lobby import Lobby
 from web.site import LobbyRequestHandler
 
 
+class _Nada:
+    def start(self):
+        return self
+
+    def stop(self):
+        return None
+
+
 def silenciar_sleep():
-    return patch.multiple(
-        "jogador.jogador",
-        sleep=lambda *_a, **_k: None,
-    )
+    return _Nada()
 
 
 class SequenciaDados:
@@ -39,23 +43,14 @@ def amarrar_dados(jogadores, dados):
         jogador.d10 = dados.d10
 
 
-CLASSES = {
-    "Ana": "Guerreiro",
-    "Bruno": "Mago",
-    "Carla": "Arqueiro",
-    "Diego": "Paladino",
-    "Eva": "Clerigo",
-    "Fabio": "Guerreiro",
-}
+NOMES = ["Ana", "Bruno", "Carla", "Diego", "Eva", "Fabio"]
 
 
 class TestPartidaSimulada6Jogadores(unittest.TestCase):
     def setUp(self):
         self.sleep = silenciar_sleep()
         self.sleep.start()
-        self.jogadores = [
-            Jogador.criar_por_classe(nome, classe) for nome, classe in CLASSES.items()
-        ]
+        self.jogadores = [Jogador.criar(nome) for nome in NOMES]
         self.partida = Partida(self.jogadores)
         self.log = []
 
@@ -65,13 +60,13 @@ class TestPartidaSimulada6Jogadores(unittest.TestCase):
     def registrar(self, mensagem):
         self.log.append(mensagem)
 
-    def test_partida_completa_com_seis_classes(self):
+    def test_partida_completa_com_seis_jogadores(self):
         ana, bruno, carla, diego, eva, fabio = self.jogadores
         partida = self.partida
 
         self.assertEqual(
             [jogador.classe for jogador in self.jogadores],
-            ["Guerreiro", "Mago", "Arqueiro", "Paladino", "Clerigo", "Guerreiro"],
+            ["Aventureiro"] * 6,
         )
         self.assertEqual(len(partida.vivos()), 6)
         self.assertEqual(partida.proximo_vivo(ana), bruno)
@@ -87,8 +82,8 @@ class TestPartidaSimulada6Jogadores(unittest.TestCase):
 
         hp_ana = ana.hp
         self.assertTrue(bruno.usar_magia("Bola de Fogo", ana))
-        self.assertEqual(bruno.mana, 5)
-        self.assertEqual(ana.hp, hp_ana - 19)
+        self.assertEqual(bruno.mana, 2)
+        self.assertEqual(ana.hp, hp_ana - 20)
         self.registrar("Bruno lancou Bola de Fogo em Ana.")
 
         dados = SequenciaDados(d20s=[18], d10s=[6])
@@ -101,14 +96,14 @@ class TestPartidaSimulada6Jogadores(unittest.TestCase):
 
         ana.hp = 40
         self.assertTrue(diego.usar_magia("Cura Leve", ana))
-        self.assertEqual(ana.hp, 48)
+        self.assertEqual(ana.hp, 57)
         self.assertEqual(diego.mana, 3)
         self.registrar("Diego curou Ana.")
 
         hp_fabio = fabio.hp
         self.assertTrue(eva.usar_magia("Rajada Congelante", fabio))
-        self.assertEqual(fabio.hp, hp_fabio - 13)
-        self.assertEqual(eva.mana, 3)
+        self.assertEqual(fabio.hp, hp_fabio - 14)
+        self.assertEqual(eva.mana, 2)
         self.registrar("Eva acertou Rajada Congelante em Fabio.")
 
         dados = SequenciaDados(d20s=[18], d10s=[5])
@@ -155,7 +150,7 @@ class TestPartidaSimulada6Jogadores(unittest.TestCase):
         self.assertEqual(ainda_unica["code"], codigo)
         self.assertEqual(len(lobby.list_rooms()["rooms"]), 1)
 
-        lobby.start_match(codigo, CLASSES, token=lobby.token_of(codigo, "Ana"))
+        lobby.start_match(codigo, token=lobby.token_of(codigo, "Ana"))
         estado = lobby.get_room(codigo)["room"]
         self.assertEqual(estado["status"], "started")
         self.assertEqual(estado["current_turn"], "Ana")
@@ -173,13 +168,13 @@ class TestPartidaSimulada6Jogadores(unittest.TestCase):
         self.assertEqual(resultado["next_turn"], "Carla")
 
         resultado = lobby.perform_action(codigo, "Carla", "attack", "Diego", token=lobby.token_of(codigo, "Carla"))
+        if resultado.get("extra"):
+            resultado = lobby.perform_action(codigo, "Carla", "attack", "Diego", token=lobby.token_of(codigo, "Carla"))
         self.assertEqual(resultado["next_turn"], "Diego")
 
         resultado = lobby.perform_action(codigo, "Diego", "use_magic", target="Ana", magic="Cura Leve", token=lobby.token_of(codigo, "Diego"))
         self.assertEqual(resultado["type"], "magic")
-        self.assertTrue(resultado.get("extra"))
-        self.assertEqual(resultado["next_turn"], "Diego")
-        resultado = lobby.perform_action(codigo, "Diego", "attack", "Ana", token=lobby.token_of(codigo, "Diego"))
+        self.assertFalse(resultado.get("extra"))
         self.assertEqual(resultado["next_turn"], "Eva")
 
         resultado = lobby.perform_action(codigo, "Eva", "use_magic", target="Fabio", magic="Rajada Congelante", token=lobby.token_of(codigo, "Eva"))
@@ -257,14 +252,7 @@ class TestHttpNaoCriaSalaInfinita(unittest.TestCase):
         self.assertEqual(len(desta), 1)
         self.assertEqual(len(desta[0]["players"]), 6)
 
-        status, started = self._post("/api/start-match", {"room": codigo, "token": created["token"], "classes": {
-            "Ana6": "Guerreiro",
-            "Bruno6": "Mago",
-            "Carla6": "Arqueiro",
-            "Diego6": "Paladino",
-            "Eva6": "Clerigo",
-            "Fabio6": "Guerreiro",
-        }})
+        status, started = self._post("/api/start-match", {"room": codigo, "token": created["token"]})
         self.assertEqual(status, 200)
         self.assertEqual(started["status"], "started")
         self.assertEqual(len(started["players"]), 6)

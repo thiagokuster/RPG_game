@@ -1,5 +1,4 @@
 import unittest
-from unittest.mock import patch
 
 from combate import resolver_ataque
 from equipamento import Equipamento
@@ -7,13 +6,6 @@ from jogador import Jogador
 
 
 class TestArmadura(unittest.TestCase):
-    def setUp(self):
-        self.sleep = patch("jogador.jogador.sleep", lambda *_a, **_k: None)
-        self.sleep.start()
-
-    def tearDown(self):
-        self.sleep.stop()
-
     def test_armadura_reduz_dano_e_perde_durabilidade(self):
         ana = Jogador.criar_por_classe("Ana", "Guerreiro")
         bruno = Jogador.criar_por_classe("Bruno", "Mago")

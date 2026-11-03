@@ -4,11 +4,11 @@ import socket
 import threading
 from pathlib import Path
 
-from combate import resolver_ataque
 from equipamento import Equipamento
 from jogador import Jogador
 from partida import Partida
-from web.limits import RateLimiter, hash_secret, sanitize_name, sanitize_password
+from sala.acoes import resolver_jogada, serializar_eventos
+from web.limits import RateLimiter, hash_secret, new_salt, sanitize_name, sanitize_password
 
 from .protocol import receive_message, send_message
 
@@ -165,7 +165,8 @@ class LobbyServer:
             if state["current_turn"] is None and state["order"]:
                 state["current_turn"] = state["order"][0]
             if senha and not state.get("password"):
-                state["password"] = hash_secret(senha)
+                state["password_salt"] = new_salt()
+                state["password"] = hash_secret(senha, state["password_salt"])
             self.connections[conn] = {"player": player_name, "room": room_name}
 
         payload_reply = {
@@ -203,13 +204,7 @@ class LobbyServer:
             send_message(conn, {"type": "error", "message": "É necessário pelo menos dois jogadores para iniciar a partida."})
             return
 
-        classes = payload.get("classes", {})
-        missing_classes = [name for name in player_names if name not in classes]
-        if missing_classes:
-            send_message(conn, {"type": "error", "message": "Defina uma classe para todos os jogadores antes de iniciar."})
-            return
-
-        jogadores = [Jogador.criar_por_classe(nome, classes[nome]) for nome in player_names]
+        jogadores = [Jogador.criar(nome) for nome in player_names]
         partida = Partida(jogadores)
 
         state["match"] = partida
@@ -283,7 +278,7 @@ class LobbyServer:
 
         with self.lock:
             state = self._ensure_room_state(room_name)
-            if state.get("password") and state["password"] != hash_secret(senha):
+            if state.get("password") and state["password"] != hash_secret(senha, state.get("password_salt", "")):
                 send_message(conn, {"type": "error", "message": "Senha da sala inválida."})
                 return
             members = self.rooms.setdefault(room_name, [])
@@ -380,10 +375,17 @@ class LobbyServer:
         if alvo.hp <= 0:
             return {"type": "error", "message": "O alvo ja esta morto."}
 
-        resultado = resolver_ataque(atacante, alvo)
-        if resultado["acertou"]:
-            Partida.ganhar_moeda(atacante, state.get("rodada", 1), silencioso=True)
-            atacante.ganhar_experiencia(25)
+        jogada = resolver_jogada(
+            match,
+            atacante,
+            "attack",
+            alvo_nome=alvo_nome,
+            rodada=state.get("rodada", 1),
+            shop=state.get("shop", []),
+        )
+        if not jogada.get("ok"):
+            return {"type": "error", "message": jogada.get("erro") or "Alvo invalido."}
+        resultado = {"acertou": jogada.get("result") == "hit", "dano": jogada.get("damage", 0)}
         resposta = {
             "type": "action",
             "room": payload["room"],
@@ -392,6 +394,8 @@ class LobbyServer:
             "target": alvo_nome,
             "result": "hit" if resultado["acertou"] else "miss",
             "damage": resultado["dano"],
+            "critico": jogada.get("critico", False),
+            "eventos": serializar_eventos(jogada.get("eventos")),
             "target_hp": alvo.hp,
             "state": self._room_snapshot(payload["room"]),
         }

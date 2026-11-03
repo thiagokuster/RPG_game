@@ -24,16 +24,14 @@ class TestFluxoCompletoPartida(unittest.TestCase):
         guerreiro.moedas = 20
         mago.moedas = 20
 
-        with patch("builtins.input", side_effect=[0, -1]):
-            loja.entrar_loja(guerreiro)
+        loja.comprar(guerreiro, 0)
 
         self.assertIn("Espada do Guardião", [item.nome for item in guerreiro.inventario])
         guerreiro.equipar(next(item for item in guerreiro.inventario if item.nome == "Espada do Guardião"))
         self.assertEqual(guerreiro.arma.nome, "Espada do Guardião")
         self.assertEqual(guerreiro.ataque_bonus, 4)
 
-        with patch("builtins.input", side_effect=[0, -1]):
-            loja.entrar_loja(guerreiro)
+        loja.comprar(guerreiro, 0)
 
         self.assertIn("Peitoral do Valor", [item.nome for item in guerreiro.inventario])
         guerreiro.equipar(next(item for item in guerreiro.inventario if item.nome == "Peitoral do Valor"))

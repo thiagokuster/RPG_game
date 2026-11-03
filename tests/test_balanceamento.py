@@ -10,7 +10,7 @@ from partida import Partida
 from combate import resolver_ataque
 
 
-CLASSES = ["Guerreiro", "Mago", "Arqueiro", "Paladino", "Clerigo"]
+NOMES = ["Ana", "Bruno", "Carla", "Diego", "Eva"]
 
 
 def silenciar_saida():
@@ -18,9 +18,6 @@ def silenciar_saida():
 
 
 def _abrir_silencio(pilha):
-    pilha.enter_context(patch("jogador.jogador.sleep", lambda *_a, **_k: None))
-    pilha.enter_context(patch("loja.loja.sleep", lambda *_a, **_k: None))
-    pilha.enter_context(patch("partida.partida.sleep", lambda *_a, **_k: None))
     pilha.enter_context(patch("builtins.print", lambda *_a, **_k: None))
 
 
@@ -92,7 +89,7 @@ def _avancar(partida, loja, atual, turno, rodada):
 
 def simular_partida(seed):
     random.seed(seed)
-    jogadores = [Jogador.criar_por_classe(classe, classe) for classe in CLASSES]
+    jogadores = [Jogador.criar(nome) for nome in NOMES]
     partida = Partida(jogadores)
     loja = Loja()
     atual = jogadores[0]
@@ -138,7 +135,7 @@ def simular_partida(seed):
         "seed": seed,
         "turnos": turno,
         "rodadas": rodada,
-        "vencedor": vivos[0].classe if len(vivos) == 1 else None,
+        "vencedor": vivos[0].nome if len(vivos) == 1 else None,
         "usos": usos,
     }
 
@@ -163,7 +160,7 @@ class TestBalanceamento(unittest.TestCase):
         print("\n=== BALANCEAMENTO (jogo real) ===")
         print(f"Sementes: {seeds[0]}-{seeds[-1]}")
         print(f"Duracao media: {duracao_media:.1f} turnos")
-        print(f"Vitorias por classe: {dict(vitorias)}")
+        print(f"Vitorias por jogador: {dict(vitorias)}")
         print(
             "Acoes: "
             f"ataque={usos['ataque']} magia={usos['magia']} cura={usos['cura']} "

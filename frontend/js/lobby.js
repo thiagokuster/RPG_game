@@ -1,5 +1,3 @@
-const CLASSES = ["Guerreiro", "Mago", "Arqueiro", "Paladino", "Clerigo"];
-
 const els = {
   playerName: document.getElementById("playerName"),
   joinName: document.getElementById("joinName"),
@@ -40,26 +38,14 @@ function goToBoard(code) {
   window.location.replace(`/jogo.html?code=${encodeURIComponent(code)}&player=${encodeURIComponent(player)}`);
 }
 
-function renderClasses(players) {
-  const previous = selectedClasses();
-  els.classBox.innerHTML = players.map((player) => {
-    const name = player.name || player;
-    const options = CLASSES.map((classe) => `<option value="${classe}">${classe}</option>`).join("");
-    return `<label>${name}<select data-player="${name}">${options}</select></label>`;
-  }).join("");
-  els.classBox.querySelectorAll("select").forEach((select) => {
-    if (previous[select.dataset.player]) {
-      select.value = previous[select.dataset.player];
-    }
+function renderPlayers(players) {
+  els.classBox.replaceChildren();
+  players.forEach((player) => {
+    const row = document.createElement("div");
+    row.className = "meta";
+    row.textContent = player.name || player;
+    els.classBox.append(row);
   });
-}
-
-function selectedClasses() {
-  const selected = {};
-  els.classBox.querySelectorAll("select").forEach((select) => {
-    selected[select.dataset.player] = select.value;
-  });
-  return selected;
 }
 
 function watchRoom(code) {
@@ -86,7 +72,7 @@ function showWaiting(room, subscribe = true) {
   els.waiting.hidden = false;
   els.waitingPlayers.textContent = `${(room.players || []).length} jogador(es) na sala`;
   if ((room.status || "waiting") === "waiting") {
-    renderClasses(room.players || []);
+    renderPlayers(room.players || []);
   }
   if (room.status === "started" || room.status === "finished") {
     goToBoard(room.code);
@@ -153,7 +139,8 @@ async function startMatch() {
       setStatus(els.createStatus, "E preciso pelo menos dois jogadores.", false);
       return;
     }
-    await api.startMatch(activeRoom, selectedClasses(), localStorage.getItem("rpg_token"));
+    const modo = document.getElementById("modoCoop")?.checked ? "coop" : "pvp";
+    await api.startMatch(activeRoom, {}, localStorage.getItem("rpg_token"), modo);
     saveSession(player, activeRoom, localStorage.getItem("rpg_token"));
     goToBoard(activeRoom);
   } catch (error) {
@@ -166,14 +153,26 @@ async function loadRooms() {
     const data = await api.rooms();
     const rooms = data.rooms || [];
     if (!rooms.length) {
-      els.roomsList.innerHTML = "<div class='room-item'>Nenhuma sala ativa.</div>";
+      const empty = document.createElement("div");
+      empty.className = "room-item";
+      empty.textContent = "Nenhuma sala ativa.";
+      els.roomsList.replaceChildren(empty);
       return;
     }
-    els.roomsList.innerHTML = "";
+    els.roomsList.replaceChildren();
     rooms.forEach((room) => {
       const item = document.createElement("div");
       item.className = "room-item";
-      item.innerHTML = `<div><div class="code">${room.code}</div><div>${(room.players || []).map((p) => p.name || p).join(", ")}</div></div><div>${room.status}${room.protected ? " · senha" : ""}</div>`;
+      const left = document.createElement("div");
+      const code = document.createElement("div");
+      code.className = "code";
+      code.textContent = room.code;
+      const names = document.createElement("div");
+      names.textContent = (room.players || []).map((player) => player.name || player).join(", ");
+      left.append(code, names);
+      const meta = document.createElement("div");
+      meta.textContent = `${room.status}${room.protected ? " · senha" : ""}`;
+      item.append(left, meta);
       item.addEventListener("click", () => {
         els.roomCode.value = room.code;
         api.room(room.code).then((data) => showWaiting(data.room));
