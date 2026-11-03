@@ -13,6 +13,8 @@ Não há deploy público. A partida roda na sua máquina ou na rede interna:
 
 ![Tabuleiro da partida](docs/tabuleiro.png)
 
+![Arena 3D em co-op contra o chefe](docs/arena3d.gif)
+
 ## 🛠️ Tecnologias
 
 - Python 3.10+ (biblioteca padrão)
