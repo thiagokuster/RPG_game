@@ -54,6 +54,7 @@ class Lobby:
                 "arma": arma.nome if arma else None,
                 "armadura": armadura.nome if armadura else None,
                 "npc": not hasattr(obj, "inventario"),
+                "passiva": getattr(obj, "passiva", None),
                 "inventory": [
                     {
                         "nome": item.nome,
@@ -104,7 +105,7 @@ class Lobby:
 
     @staticmethod
     def _make_player(name, classe=None):
-        jogador = Jogador.criar(name)
+        jogador = Jogador.criar(name, passiva=classe)
         return {
             "name": jogador.nome,
             "classe": jogador.classe,
@@ -220,7 +221,8 @@ class Lobby:
             if len(player_names) < 2:
                 raise ValueError("É necessário pelo menos dois jogadores para iniciar a partida.")
 
-            jogadores = [Jogador.criar(nome) for nome in player_names]
+            escolhas = classes or {}
+            jogadores = Jogador.criar_elenco(player_names, escolhas)
             modo_sala = "coop" if str(modo).lower() == "coop" else "pvp"
             if modo_sala == "coop":
                 from monstro import Monstro
@@ -305,19 +307,27 @@ class Lobby:
     def _eh_npc(self, jogador):
         return not hasattr(jogador, "inventario")
 
+    def _emitir(self, match, eventos):
+        return serializar_eventos(match.carimbar(eventos))
+
     def _resolver_turno_npc(self, room, match):
         atual = next((jogador for jogador in match.jogadores if jogador.nome == room.get("current_turn")), None)
         while atual is not None and self._eh_npc(atual) and room.get("status") == "started":
             alvos = [jogador for jogador in match.jogadores if not self._eh_npc(jogador) and jogador.hp > 0]
             if not alvos:
                 break
-            resultado = atual.atacar(alvos[0])
-            eventos = serializar_eventos(resultado.get("eventos") if isinstance(resultado, dict) else [resultado])
-            room["eventos"] = list(room.get("eventos") or []) + eventos
+            acao = atual.agir if hasattr(atual, "agir") else atual.atacar
+            resultado = acao(alvos) if acao is atual.agir else atual.atacar(alvos[0])
+            eventos = self._emitir(match, resultado.get("eventos") if isinstance(resultado, dict) else [resultado])
+            room["eventos"] = (list(room.get("eventos") or []) + eventos)[-40:]
             for ev in eventos:
                 if ev.get("texto"):
                     self._append_log(room, ev["texto"])
             match.verificar_mortos()
+            extra = self._emitir(match, match.tentar_proxima_onda())
+            if extra:
+                room["eventos"] = (room["eventos"] + extra)[-40:]
+                self._sync_players(room, match)
             if match.fim_partida():
                 room["status"] = "finished"
                 room["winner"] = match.resultado_fim().get("vencedor") or "nenhum"
@@ -347,6 +357,10 @@ class Lobby:
     def _concluir(self, room, room_name, result):
         match = room["match"]
         match.verificar_mortos()
+        extra = self._emitir(match, match.tentar_proxima_onda())
+        if extra:
+            room["eventos"] = (list(room.get("eventos") or []) + extra)[-40:]
+            result["eventos"] = list(room["eventos"])
         self._sync_players(room, match)
         if match.fim_partida():
             room["status"] = "finished"
@@ -412,7 +426,7 @@ class Lobby:
                 }
             if "shop" in jogada:
                 room["shop"] = jogada["shop"]
-            eventos = serializar_eventos(jogada.get("eventos"))
+            eventos = self._emitir(match, jogada.get("eventos"))
             room["eventos"] = eventos
             payload = {
                 "player": player,

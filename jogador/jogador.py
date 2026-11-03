@@ -15,6 +15,18 @@ class Jogador:
         "sorte": 2,
         "kit": "arma",
     }
+    PASSIVAS = ("Bruto", "Arcano", "Preciso")
+    _ALIASES_PASSIVA = {
+        "bruto": "Bruto",
+        "ferro": "Bruto",
+        "guerreiro": "Bruto",
+        "paladino": "Bruto",
+        "arcano": "Arcano",
+        "mago": "Arcano",
+        "clerigo": "Arcano",
+        "preciso": "Preciso",
+        "arqueiro": "Preciso",
+    }
 
     def __init__(self, nome, hp=100, classe="Aventureiro", nivel=1):
         self.nome = nome
@@ -51,20 +63,36 @@ class Jogador:
         self.arma: Equipamento = None
         self.anel = None
         self.armadura = None
+        self.passiva = "Bruto"
         self.aplicar_base()
 
     @classmethod
-    def criar(cls, nome, nivel=1):
+    def normalizar_passiva(cls, valor):
+        if not valor:
+            return "Bruto"
+        return cls._ALIASES_PASSIVA.get(str(valor).strip().lower(), "Bruto")
+
+    @classmethod
+    def criar(cls, nome, nivel=1, passiva=None):
         jogador = cls(nome=nome, hp=cls.BASE["hp"], classe="Aventureiro", nivel=nivel)
+        jogador.aplicar_passiva(passiva)
         jogador.aplicar_kit()
         return jogador
 
     @classmethod
+    def criar_elenco(cls, nomes, passivas=None):
+        passivas = passivas or {}
+        return [
+            cls.criar(nome, passiva=passivas.get(nome) or cls.PASSIVAS[indice % 3])
+            for indice, nome in enumerate(nomes)
+        ]
+
+    @classmethod
     def criar_por_classe(cls, nome, classe=None, nivel=1):
-        return cls.criar(nome, nivel=nivel)
+        return cls.criar(nome, nivel=nivel, passiva=classe)
 
     def aplicar_classe(self, classe=None):
-        self.aplicar_base()
+        self.aplicar_passiva(classe)
 
     def aplicar_base(self):
         config = self.BASE
@@ -77,7 +105,7 @@ class Jogador:
         self.max_mana = config.get("mana", 0)
         self.mana = self.max_mana
         self.sorte = config.get("sorte", 2)
-        self.magias = [Magia.bola_de_fogo(), Magia.cura_leve(), Magia.rajada_congelante()]
+        self.magias = [Magia.cura_leve()]
         self.reducao_nativa = 0
         self.critico = 20
         self.bonus_acerto = 0
@@ -90,6 +118,31 @@ class Jogador:
         self.gasta_turno = True
         self.extra_disponivel = True
         self.usou_folego = False
+
+    def aplicar_passiva(self, passiva=None):
+        self.aplicar_base()
+        nome = self.normalizar_passiva(passiva)
+        self.passiva = nome
+        if nome == "Bruto":
+            self.max_hp = 115
+            self.hp = self.max_hp
+            self.max_mana = 3
+            self.mana = 3
+            self.reducao_nativa = 1
+            self.magias = [Magia.cura_leve(), Magia.golpe_de_energia()]
+        elif nome == "Arcano":
+            self.max_hp = 90
+            self.hp = self.max_hp
+            self.max_mana = 6
+            self.mana = 6
+            self.mana_por_rodada = 1
+            self.kit = "anel_mana"
+            self.magias = [Magia.cura_leve(), Magia.bola_de_fogo()]
+        else:
+            self.bonus_acerto = 1
+            self.critico = 19
+            self.kit = "anel_sorte"
+            self.magias = [Magia.cura_leve(), Magia.rajada_congelante()]
 
     def aplicar_kit(self):
         if self.kit == "arma":
@@ -131,8 +184,18 @@ class Jogador:
             if self.max_mana > 0:
                 self.max_mana += 1
             self.mana = self.max_mana
-            eventos.append(evento("nivel", de=self.nome, nivel=self.nivel))
+            if self.nivel >= 3:
+                self._desbloquear_magias()
+            eventos.append(evento("nivel", de=self.nome, nivel=self.nivel, passiva=self.passiva))
         return eventos
+
+    def _desbloquear_magias(self):
+        conhecidas = {magia.nome for magia in self.magias}
+        extras = [Magia.bola_de_fogo(), Magia.rajada_congelante(), Magia.golpe_de_energia()]
+        for magia in extras:
+            if magia.nome not in conhecidas:
+                self.magias.append(magia)
+                conhecidas.add(magia.nome)
 
     def d10(self):
         return randint(1, 10)

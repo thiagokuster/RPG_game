@@ -19,6 +19,8 @@ class Monstro:
         self.max_mana = 0
         self.critico = 20
         self.bonus_ataque_total = ataque_bonus
+        self.onda = 1
+        self.turnos = 0
 
     @classmethod
     def gerar_monstro(cls, nivel=1):
@@ -46,7 +48,7 @@ class Monstro:
     @classmethod
     def gerar_chefe(cls, onda=1):
         hp = 40 + onda * 18
-        return cls(
+        chefe = cls(
             nome=f"Chefe da onda {onda}",
             hp=hp,
             ataque_bonus=4 + onda,
@@ -56,6 +58,50 @@ class Monstro:
             recompensa=20 + onda * 8,
             tipo="chefe",
         )
+        chefe.onda = onda
+        return chefe
+
+    @staticmethod
+    def escolher_alvo(jogadores):
+        vivos = [jogador for jogador in jogadores if getattr(jogador, "hp", 0) > 0]
+        if not vivos:
+            return None
+        if randint(1, 10) <= 7:
+            return min(vivos, key=lambda jogador: (jogador.hp, getattr(jogador, "max_hp", jogador.hp)))
+        return choice(vivos)
+
+    def pisada(self, alvos):
+        vivos = sorted(
+            [jogador for jogador in alvos if getattr(jogador, "hp", 0) > 0],
+            key=lambda jogador: (jogador.hp, getattr(jogador, "max_hp", jogador.hp)),
+        )[:2]
+        eventos = []
+        bruto = 6 + max(1, self.ataque_bonus // 2)
+        for alvo in vivos:
+            if hasattr(alvo, "receber_dano"):
+                dano = alvo.receber_dano(bruto)["dano"]
+            else:
+                alvo.hp = max(0, getattr(alvo, "hp", 0) - bruto)
+                dano = bruto
+            ev = evento("magia", de=self.nome, para=nome(alvo), magia="Pisada", dano=dano, acertou=True, cura=0)
+            eventos.append(ev)
+            if getattr(alvo, "hp", 0) <= 0:
+                eventos.append(evento("morte", de=nome(alvo)))
+        resultado = evento("magia", de=self.nome, magia="Pisada", acertou=True, dano=bruto)
+        resultado["eventos"] = eventos
+        return resultado
+
+    def agir(self, alvos):
+        self.turnos += 1
+        vivos = [jogador for jogador in alvos if getattr(jogador, "hp", 0) > 0]
+        if self.turnos % 3 == 0 and len(vivos) >= 2:
+            return self.pisada(vivos)
+        alvo = self.escolher_alvo(vivos)
+        if alvo is None:
+            resultado = evento("ataque", de=self.nome, acertou=False, dano=0)
+            resultado["eventos"] = [resultado]
+            return resultado
+        return self.atacar(alvo)
 
     def atacar(self, alvo):
         ataque = randint(1, 20) + self.ataque_bonus

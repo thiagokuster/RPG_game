@@ -55,11 +55,11 @@ class TestPartidaSimulada5Jogadores(unittest.TestCase):
     def setUp(self):
         self.sleep = silenciar_sleep()
         self.sleep.start()
-        self.ana = Jogador.criar_por_classe("Ana", "Guerreiro")
-        self.bruno = Jogador.criar_por_classe("Bruno", "Mago")
-        self.carla = Jogador.criar_por_classe("Carla", "Arqueiro")
-        self.diego = Jogador.criar_por_classe("Diego", "Paladino")
-        self.eva = Jogador.criar_por_classe("Eva", "Clerigo")
+        self.ana = Jogador.criar("Ana", passiva="Bruto")
+        self.bruno = Jogador.criar("Bruno", passiva="Arcano")
+        self.carla = Jogador.criar("Carla", passiva="Preciso")
+        self.diego = Jogador.criar("Diego", passiva="Bruto")
+        self.eva = Jogador.criar("Eva", passiva="Preciso")
         self.jogadores = [self.ana, self.bruno, self.carla, self.diego, self.eva]
         self.partida = Partida(self.jogadores)
         self.loja = Loja()
@@ -75,10 +75,10 @@ class TestPartidaSimulada5Jogadores(unittest.TestCase):
         ana, bruno, carla, diego, eva = self.jogadores
         partida = self.partida
 
-        self.assertEqual([j.classe for j in self.jogadores], ["Aventureiro"] * 5)
-        self.assertEqual(ana.max_mana, 4)
-        self.assertEqual(bruno.max_mana, 4)
-        self.assertEqual(diego.max_mana, 4)
+        self.assertEqual([j.passiva for j in self.jogadores], ["Bruto", "Arcano", "Preciso", "Bruto", "Preciso"])
+        self.assertEqual(ana.max_mana, 3)
+        self.assertEqual(bruno.max_mana, 7)
+        self.assertEqual(diego.max_mana, 3)
         self.assertEqual(eva.max_mana, 4)
         self.assertEqual(len(self.loja.estoque), 3)
         self.assertEqual(partida.proximo_vivo(ana), bruno)
@@ -95,8 +95,8 @@ class TestPartidaSimulada5Jogadores(unittest.TestCase):
 
         hp_ana = ana.hp
         self.assertTrue(bruno.usar_magia("Bola de Fogo", ana))
-        self.assertEqual(bruno.mana, 2)
-        self.assertEqual(ana.hp, hp_ana - 20)
+        self.assertEqual(bruno.mana, 5)
+        self.assertEqual(ana.hp, hp_ana - 19)
         self.assertEqual(partida.proximo_vivo(bruno), carla)
         self.registrar("Bruno lancou Bola de Fogo em Ana (20 dano, 2 mana).")
 
@@ -141,7 +141,7 @@ class TestPartidaSimulada5Jogadores(unittest.TestCase):
         self.assertTrue(diego.usar_magia("Cura Leve", ana))
         self.assertEqual(ana.hp, 57)
         self.assertEqual(diego.hp, hp_diego)
-        self.assertEqual(diego.mana, 3)
+        self.assertEqual(diego.mana, 2)
         self.registrar("Diego curou Ana, nao a si mesmo.")
 
         hp_bruno = bruno.hp

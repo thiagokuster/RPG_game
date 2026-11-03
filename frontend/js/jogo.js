@@ -64,7 +64,8 @@ function render(room) {
     title.textContent = player.name;
     const meta = document.createElement("div");
     meta.className = "meta";
-    meta.textContent = `CA ${player.armor_class || "-"} · Nv ${player.nivel || 1}`;
+    const traco = player.passiva ? ` · ${player.passiva}` : "";
+    meta.textContent = `CA ${player.armor_class || "-"}${traco} · Nv ${player.nivel || 1}`;
     const bar = document.createElement("div");
     bar.className = "bar";
     const hp = document.createElement("span");

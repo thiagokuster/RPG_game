@@ -7,12 +7,18 @@ from motor.eventos import evento, nome, textos
 
 
 class Partida:
+    ONDAS_MAX = 3
+
     def __init__(self, jogadores: list[Jogador], modo="pvp"):
         self.jogadores = jogadores
         self.mortos = []
         self.modo = modo
         self.onda = 0
+        self.seq = 0
         self.eventos = []
+        for jogador in jogadores:
+            if getattr(jogador, "tipo", "") == "chefe":
+                self.onda = max(self.onda, getattr(jogador, "onda", 1))
 
     def vivos(self):
         return [jogador for jogador in self.jogadores if jogador.hp > 0]
@@ -42,7 +48,40 @@ class Partida:
 
     @classmethod
     def registrar_jogadores(cls, qj, hp=100, classes=None):
-        return [Jogador.criar(f"Jogador {i + 1}") for i in range(qj)]
+        nomes = [f"Jogador {i + 1}" for i in range(qj)]
+        passivas = None
+        if classes:
+            passivas = {nomes[i]: classes[i] for i in range(min(len(nomes), len(classes)))}
+        return Jogador.criar_elenco(nomes, passivas)
+
+    def carimbar(self, eventos):
+        saida = []
+        for ev in eventos or []:
+            if not isinstance(ev, dict):
+                continue
+            dado = dict(ev)
+            if "id" not in dado:
+                self.seq += 1
+                dado["id"] = self.seq
+            saida.append(dado)
+        self.registrar_evento(saida)
+        return saida
+
+    def tentar_proxima_onda(self):
+        if self.modo != "coop":
+            return []
+        if not self.vivos_jogadores():
+            return []
+        if any(getattr(jogador, "tipo", "") == "chefe" and jogador.hp > 0 for jogador in self.jogadores):
+            return []
+        if self.onda >= self.ONDAS_MAX:
+            return []
+        from monstro import Monstro
+
+        self.onda += 1
+        chefe = Monstro.gerar_chefe(self.onda)
+        self.jogadores.append(chefe)
+        return [evento("onda", de=chefe.nome, onda=self.onda)]
 
     def registrar_evento(self, ev):
         if not ev:
@@ -156,6 +195,8 @@ class Partida:
         return evento("fim", vencedor=None, acabou=False)
 
     def fim_partida(self):
+        if self.modo == "coop":
+            self.tentar_proxima_onda()
         resultado = self.resultado_fim()
         if resultado.get("acabou"):
             self.registrar_evento(resultado)

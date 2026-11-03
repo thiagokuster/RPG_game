@@ -45,9 +45,11 @@
       </aside>
     </div>
   </div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
   <script src="/js/api.js"></script>
-  <script src="/js/arena3d.js"></script>
+  <script type="importmap">
+    { "imports": { "three": "/js/vendor/three.module.min.js" } }
+  </script>
+  <script type="module" src="/js/arena3d.js"></script>
   <script src="/js/jogo.js"></script>
 </body>
 </html>

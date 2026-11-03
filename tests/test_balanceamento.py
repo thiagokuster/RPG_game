@@ -89,7 +89,7 @@ def _avancar(partida, loja, atual, turno, rodada):
 
 def simular_partida(seed):
     random.seed(seed)
-    jogadores = [Jogador.criar(nome) for nome in NOMES]
+    jogadores = Jogador.criar_elenco(NOMES)
     partida = Partida(jogadores)
     loja = Loja()
     atual = jogadores[0]

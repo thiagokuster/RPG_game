@@ -4,71 +4,55 @@ from combate import resolver_ataque
 from jogador import Jogador
 
 
-class TestAventureiro(unittest.TestCase):
-    def test_todos_nascem_iguais(self):
-        ana = Jogador.criar("Ana")
+class TestPassivas(unittest.TestCase):
+    def test_passivas_diferenciam_sem_classe(self):
+        bruto = Jogador.criar("Ana", passiva="Bruto")
+        arcano = Jogador.criar("Bruno", passiva="Arcano")
+        preciso = Jogador.criar("Carla", passiva="Preciso")
+
+        self.assertEqual(bruto.classe, "Aventureiro")
+        self.assertEqual(arcano.passiva, "Arcano")
+        self.assertEqual(bruto.max_hp, 115)
+        self.assertEqual(bruto.reducao_nativa, 1)
+        self.assertEqual([m.nome for m in bruto.magias], ["Cura Leve", "Golpe de Energia"])
+        self.assertEqual(arcano.max_hp, 90)
+        self.assertEqual(arcano.mana_por_rodada, 1)
+        self.assertEqual([m.nome for m in arcano.magias], ["Cura Leve", "Bola de Fogo"])
+        self.assertEqual(preciso.critico, 19)
+        self.assertEqual(preciso.bonus_acerto, 1)
+        self.assertEqual([m.nome for m in preciso.magias], ["Cura Leve", "Rajada Congelante"])
+
+    def test_criar_por_classe_vira_passiva(self):
+        ana = Jogador.criar_por_classe("Ana", "Guerreiro")
         bruno = Jogador.criar_por_classe("Bruno", "Mago")
-        carla = Jogador.criar("Carla")
+        self.assertEqual(ana.passiva, "Bruto")
+        self.assertEqual(bruno.passiva, "Arcano")
 
-        for jogador in (ana, bruno, carla):
-            self.assertEqual(jogador.classe, "Aventureiro")
-            self.assertEqual(jogador.max_hp, 100)
-            self.assertEqual(jogador.armor_class, 14)
-            self.assertEqual(jogador.max_mana, 4)
-            self.assertEqual(jogador.sorte, 2)
-            self.assertEqual(jogador.reducao_nativa, 0)
-            self.assertEqual(jogador.critico, 20)
-            self.assertFalse(jogador.tiro_multiplo)
-            self.assertEqual(jogador.arma.nome, "Espada de Treino")
-            self.assertEqual(
-                [magia.nome for magia in jogador.magias],
-                ["Bola de Fogo", "Cura Leve", "Rajada Congelante"],
-            )
-
-    def test_critico_so_no_20_sem_reducao_nativa(self):
-        ana = Jogador.criar("Ana")
-        bruno = Jogador.criar("Bruno")
+    def test_bruto_reduz_dano_e_preciso_critica_em_19(self):
+        ana = Jogador.criar("Ana", passiva="Bruto")
+        bruno = Jogador.criar("Bruno", passiva="Arcano")
         bruno.d20 = lambda: 18
         bruno.d10 = lambda: 5
         hp = ana.hp
         resultado = resolver_ataque(bruno, ana)
         self.assertTrue(resultado["acertou"])
-        self.assertEqual(resultado["reduzido"], 0)
+        self.assertEqual(resultado["reduzido"], 1)
         self.assertEqual(ana.hp, hp - resultado["dano"])
 
-        ana.d20 = lambda: 19
-        ana.d10 = lambda: 5
-        falha = resolver_ataque(ana, bruno)
-        self.assertFalse(falha["critico"])
-
-        ana.d20 = lambda: 20
-        critico = resolver_ataque(ana, bruno)
+        preciso = Jogador.criar("Carla", passiva="Preciso")
+        preciso.d20 = lambda: 19
+        preciso.d10 = lambda: 5
+        critico = resolver_ataque(preciso, bruno)
         self.assertTrue(critico["critico"])
-        self.assertEqual(critico["dano"], 38)
 
-    def test_cura_e_rajada_gastam_o_turno(self):
-        diego = Jogador.criar("Diego")
-        diego.hp = 40
-        diego.iniciar_turno()
-        self.assertTrue(diego.usar_magia("Cura Leve", diego))
-        self.assertEqual(diego.hp, 57)
-        self.assertTrue(diego.gasta_turno)
-
-        eva = Jogador.criar("Eva")
-        alvo = Jogador.criar("Ana")
-        alvo.hp = 80
-        eva.iniciar_turno()
-        self.assertTrue(eva.usar_magia("Rajada Congelante", alvo))
-        self.assertTrue(eva.gasta_turno)
-
-    def test_nao_tem_folego_nem_mana_por_rodada(self):
-        ana = Jogador.criar("Ana")
-        self.assertFalse(ana.usar_magia("Segundo Folego", ana))
-
-        bruno = Jogador.criar("Bruno")
-        bruno.mana = 3
-        bruno.inicio_rodada()
-        self.assertEqual(bruno.mana, 3)
+    def test_nivel_tres_libera_as_outras_magias(self):
+        ana = Jogador.criar("Ana", passiva="Bruto")
+        ana.experiencia = 99
+        ana.ganhar_experiencia(200)
+        self.assertGreaterEqual(ana.nivel, 3)
+        nomes = {magia.nome for magia in ana.magias}
+        self.assertIn("Bola de Fogo", nomes)
+        self.assertIn("Rajada Congelante", nomes)
 
 
 if __name__ == "__main__":

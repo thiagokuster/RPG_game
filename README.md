@@ -24,7 +24,7 @@ Não há deploy público. A partida roda na sua máquina ou na rede interna:
 ## ✨ Funcionalidades
 
 - Motor de combate devolve eventos JSON; o terminal, o lobby e a arena 3D só exibem
-- Todo mundo começa como aventureiro igual; a diferença vem da loja, do equipamento e das magias
+- Todo mundo começa como aventureiro; a diferença vem da passiva (Bruto, Arcano ou Preciso), da loja e do nível
 - Combate por turnos com ataque, magia, loja e inventário
 - Arena 3D opcional (Three.js) e modo co-op contra chefe
 - Armadura com redução de dano e durabilidade
@@ -36,11 +36,15 @@ Não há deploy público. A partida roda na sua máquina ou na rede interna:
 
 ## ⚔️ Aventureiro
 
-Todo jogador entra igual. O que muda o jogo é o que cada um compra, equipa e conjura.
+A ficha base é a mesma. No lobby cada um escolhe **uma passiva** (não é classe): isso muda o começo, não trava o resto da partida. No nível 3 as outras magias de dano também desbloqueiam.
 
-| | HP | CA | Atq/Dano | Mana | Kit | Magias |
-| --- | --- | --- | --- | --- | --- | --- |
-| Aventureiro | 100 | 14 | +2/+2 | 4 | Espada de Treino | Bola de Fogo, Cura Leve, Rajada Congelante |
+| Passiva | HP | Mana | Traço | Magias iniciais |
+| --- | --- | --- | --- | --- |
+| Bruto | 115 | 3 | Redução 1 | Cura Leve, Golpe de Energia |
+| Arcano | 90 | 6 | +1 mana/rodada | Cura Leve, Bola de Fogo |
+| Preciso | 100 | 4 | +1 acerto, crítico 19 | Cura Leve, Rajada Congelante |
+
+No co-op o chefe mira o mais ferido na maior parte das vezes, usa Pisada a cada três turnos e avança até 3 ondas.
 
 ## 🎲 Combate
 

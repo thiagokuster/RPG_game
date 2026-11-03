@@ -52,6 +52,8 @@ def texto(ev):
         if ev.get("resultado") == "ganhou":
             return f"{de} apostou {ev.get('aposta', 0)} e ganhou {ev.get('moedas', 0)} moedas."
         return f"{de} apostou {ev.get('aposta', 0)} e perdeu."
+    if tipo == "onda":
+        return f"{de} surgiu na onda {ev.get('onda')}."
     if tipo == "monstro":
         return f"Um {ev.get('nome', 'monstro')} apareceu."
     if tipo == "armadura":

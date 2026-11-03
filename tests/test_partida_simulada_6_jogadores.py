@@ -50,7 +50,7 @@ class TestPartidaSimulada6Jogadores(unittest.TestCase):
     def setUp(self):
         self.sleep = silenciar_sleep()
         self.sleep.start()
-        self.jogadores = [Jogador.criar(nome) for nome in NOMES]
+        self.jogadores = Jogador.criar_elenco(NOMES)
         self.partida = Partida(self.jogadores)
         self.log = []
 
@@ -65,8 +65,8 @@ class TestPartidaSimulada6Jogadores(unittest.TestCase):
         partida = self.partida
 
         self.assertEqual(
-            [jogador.classe for jogador in self.jogadores],
-            ["Aventureiro"] * 6,
+            [jogador.passiva for jogador in self.jogadores],
+            ["Bruto", "Arcano", "Preciso", "Bruto", "Arcano", "Preciso"],
         )
         self.assertEqual(len(partida.vivos()), 6)
         self.assertEqual(partida.proximo_vivo(ana), bruno)
@@ -82,8 +82,8 @@ class TestPartidaSimulada6Jogadores(unittest.TestCase):
 
         hp_ana = ana.hp
         self.assertTrue(bruno.usar_magia("Bola de Fogo", ana))
-        self.assertEqual(bruno.mana, 2)
-        self.assertEqual(ana.hp, hp_ana - 20)
+        self.assertEqual(bruno.mana, 5)
+        self.assertEqual(ana.hp, hp_ana - 19)
         self.registrar("Bruno lancou Bola de Fogo em Ana.")
 
         dados = SequenciaDados(d20s=[18], d10s=[6])
@@ -97,14 +97,14 @@ class TestPartidaSimulada6Jogadores(unittest.TestCase):
         ana.hp = 40
         self.assertTrue(diego.usar_magia("Cura Leve", ana))
         self.assertEqual(ana.hp, 57)
-        self.assertEqual(diego.mana, 3)
+        self.assertEqual(diego.mana, 2)
         self.registrar("Diego curou Ana.")
 
         hp_fabio = fabio.hp
-        self.assertTrue(eva.usar_magia("Rajada Congelante", fabio))
-        self.assertEqual(fabio.hp, hp_fabio - 14)
-        self.assertEqual(eva.mana, 2)
-        self.registrar("Eva acertou Rajada Congelante em Fabio.")
+        self.assertTrue(eva.usar_magia("Bola de Fogo", fabio))
+        self.assertEqual(fabio.hp, hp_fabio - 20)
+        self.assertEqual(eva.mana, 5)
+        self.registrar("Eva lancou Bola de Fogo em Fabio.")
 
         dados = SequenciaDados(d20s=[18], d10s=[5])
         amarrar_dados([fabio], dados)
@@ -177,7 +177,7 @@ class TestPartidaSimulada6Jogadores(unittest.TestCase):
         self.assertFalse(resultado.get("extra"))
         self.assertEqual(resultado["next_turn"], "Eva")
 
-        resultado = lobby.perform_action(codigo, "Eva", "use_magic", target="Fabio", magic="Rajada Congelante", token=lobby.token_of(codigo, "Eva"))
+        resultado = lobby.perform_action(codigo, "Eva", "use_magic", target="Fabio", magic="Bola de Fogo", token=lobby.token_of(codigo, "Eva"))
         self.assertEqual(resultado["type"], "magic")
         self.assertEqual(resultado["next_turn"], "Fabio")
 

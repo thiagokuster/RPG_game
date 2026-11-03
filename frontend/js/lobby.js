@@ -38,13 +38,34 @@ function goToBoard(code) {
   window.location.replace(`/jogo.html?code=${encodeURIComponent(code)}&player=${encodeURIComponent(player)}`);
 }
 
+const PASSIVAS = ["Bruto", "Arcano", "Preciso"];
+
+function selectedPassivas() {
+  const selected = {};
+  els.classBox.querySelectorAll("select").forEach((select) => {
+    selected[select.dataset.player] = select.value;
+  });
+  return selected;
+}
+
 function renderPlayers(players) {
+  const previous = selectedPassivas();
   els.classBox.replaceChildren();
-  players.forEach((player) => {
-    const row = document.createElement("div");
-    row.className = "meta";
-    row.textContent = player.name || player;
-    els.classBox.append(row);
+  players.forEach((player, index) => {
+    const name = player.name || player;
+    const label = document.createElement("label");
+    label.append(document.createTextNode(`${name} · passiva`));
+    const select = document.createElement("select");
+    select.dataset.player = name;
+    PASSIVAS.forEach((passiva) => {
+      const option = document.createElement("option");
+      option.value = passiva;
+      option.textContent = passiva;
+      select.append(option);
+    });
+    select.value = previous[name] || PASSIVAS[index % PASSIVAS.length];
+    label.append(select);
+    els.classBox.append(label);
   });
 }
 
@@ -140,7 +161,7 @@ async function startMatch() {
       return;
     }
     const modo = document.getElementById("modoCoop")?.checked ? "coop" : "pvp";
-    await api.startMatch(activeRoom, {}, localStorage.getItem("rpg_token"), modo);
+    await api.startMatch(activeRoom, selectedPassivas(), localStorage.getItem("rpg_token"), modo);
     saveSession(player, activeRoom, localStorage.getItem("rpg_token"));
     goToBoard(activeRoom);
   } catch (error) {

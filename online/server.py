@@ -204,7 +204,8 @@ class LobbyServer:
             send_message(conn, {"type": "error", "message": "É necessário pelo menos dois jogadores para iniciar a partida."})
             return
 
-        jogadores = [Jogador.criar(nome) for nome in player_names]
+        escolhas = payload.get("classes") or payload.get("passivas") or {}
+        jogadores = Jogador.criar_elenco(player_names, escolhas)
         partida = Partida(jogadores)
 
         state["match"] = partida
@@ -395,7 +396,7 @@ class LobbyServer:
             "result": "hit" if resultado["acertou"] else "miss",
             "damage": resultado["dano"],
             "critico": jogada.get("critico", False),
-            "eventos": serializar_eventos(jogada.get("eventos")),
+            "eventos": serializar_eventos(match.carimbar(jogada.get("eventos"))),
             "target_hp": alvo.hp,
             "state": self._room_snapshot(payload["room"]),
         }
